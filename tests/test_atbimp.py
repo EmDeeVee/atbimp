@@ -1,4 +1,3 @@
-
 from pytest import raises
 from atbimp.main import AtbImpAppTest
 

@@ -1,6 +1,6 @@
-import csv
 import os
 from cement import Controller, ex
+from .components.cvsreader import CsvReader
 
 
 
@@ -16,39 +16,7 @@ class Csv(Controller):
       stacked_type = 'nested'
       stacked_on = 'base'
    
-   """ CvsReader helper"""
-   class CsvReader:
-      reader=None          # Hold the csv reader object
-      fh_reader=None       # file handle for the reader
-
-      
-      def open(self,csvfile):
-         # if the file doesn't exist we're done
-         if not os.path.exists(csvfile):
-            return False
-         
-         try:
-            self.fh_reader = open(csvfile)
-            self.reader = csv.reader(self.fh_reader)
-         except:
-            return False
-         
-         return True
-      
-         
-      def readline(self):
-         try:
-            row = self.reader.__next__()
-            return row
-         except:
-            return False
-
-      # Pick up your mess before you leave.
-      def __del__(self):
-         if not self.fh_reader is None:
-            self.fh_reader.close()
-
-
+  
    ## ===============================================
    ## Controll er Code
 
@@ -58,8 +26,28 @@ class Csv(Controller):
       pass
 
    @ex(hide=True)
-   def _check_row(self, row):
-      print(row)
+   def _check_row(self, row, rowNum):
+
+      # print(row)
+      # Date `row[0]' has inconconsistend date format
+      # check and fix
+      #
+      dTok = row[0].split('/')
+      if not len(dTok[0]) == 2 and len(dTok[1]) == 2 and len(dTok[2]) == 4:
+         newDate = "%s/%s/%s" % (('00'+dTok[0])[-2:], ('00'+dTok[1])[-2:], dTok[2])
+         self.app.log.warning('  - row(%d):\tIncorrect date format. Correcting %s => %s' % (rowNum, row[0], newDate))
+         row[0] = newDate
+
+
+      # Customer Ref Number `row[4]' sometimes has a leading "`" without
+      # a closing one.  check and fix
+      #
+      if len(row[4]) and row[4][0] == "'":
+         self.app.log.warning('  - row(%d):\tCust Ref field has leading quote(\'). Correcting %s => %s' % (rowNum, row[4], row[4][1:]))
+         row[4] = row[4][1:]
+
+
+
 
    @ex(
          help='sanity check on import file',
@@ -75,15 +63,21 @@ class Csv(Controller):
       self.app.log.info("Checking csv file: %s" % csv_file)
 
       # See if file exists and we can open this
-      if not self.CsvReader.open(self, csv_file):
+      reader = CsvReader()
+      if not reader.open(csv_file):
          self.app.log.error('Error reading from csv file: %s' % csv_file)
          return None
           
-      
-      row = self.CsvReader.readline(self)
-      while not row is False:
-         self._check_row(row)
-         row = self.CsvReader.readline(self)
+
+      row = reader.readline()
+      if reader.isHeaderLine(row):
+         self.app.log.warning('  - Skipping header line: (1)%s....' % row[0])
+         # Get another one
+         row = reader.readline()
+
+      while not row is None:
+         self._check_row(row, reader.nCurrentRow)
+         row = reader.readline()
 
 
    @ex(help='merge last imported file into transactions table', aliases=['merge'])
