@@ -4,29 +4,22 @@ import csv
 
 """ CvsReader helper"""
 class CsvReader():
+    '''
+    class CsvReader():          Helper class for the class: Csv. Implements Lib/csv reader                            
+    '''
     def __init__(self) -> None:
         self.reader=None                   # Hold the csv reader object
         self.fh_reader=None                # file handle for the reader
-        self.nHeaderLines = 0              # number of csv Header lines (usually 0 or 1)
-        self.nRows = 0                     # number of Rows in this file
-        self.nCurrentRow = 0               # current row
 
-    # Return the number of DataLines processed
-    def getNumberOfDataLines(self):
-        return self.nRows - self.nHeaderLines
-    
     # Check if this is a header line
     def isHeaderLine(self, row):
         if row[0] == 'Transaction Date':
-            self.nHeaderLines+=1
-            self.nCurrentRow-=1
             return True
         return 
     
     
     # Open the csv file
     def open(self,csvfile):
-        # if the file doesn't exist we're done
         if not os.path.exists(csvfile):
             return False
         
@@ -43,8 +36,6 @@ class CsvReader():
     def readline(self):
         try:
             row = self.reader.__next__()
-            self.nRows+=1
-            self.nCurrentRow=self.nRows
             return row
         
         except:
@@ -56,7 +47,7 @@ class CsvReader():
         try:
             for i,fld in enumerate(row):
                 dct[labels[i]] = row[i]
-                
+
         except:
             return None
         

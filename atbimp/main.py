@@ -12,10 +12,21 @@ from .controllers.csv import Csv
 CONFIG = init_defaults('atbimp')
 # CONFIG['atbimp']['db_file'] = '~/.atbimp/transactions.db3'
 CONFIG['atbimp']['db_file'] = './transactions.db3'
-CONFIG['atbimp']['db_tbl_cols'] = ['date', 'route', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten']
+CONFIG['atbimp']['db_tbl_cols'] = [
+    'date', 
+    'account_rtn', 
+    'account_number', 
+    'transaction_type', 
+    'customer_ref_number', 
+    'debit_amount', 
+    'credit_amount', 
+    'running_balance_amount', 
+    'extended_text', 
+    'bank_reference_number' 
+]
 CONFIG['atbimp']['create_table_import'] = """
 CREATE TABLE import (
-    "Date" DATE, 
+    "date" DATE, 
     "account_rtn" TEXT, 
     "account_number" TEXT, 
     "transaction_type" TEXT, 
