@@ -3,7 +3,6 @@
 SQlite 3 wrapper for cement
 '''
 import os
-import sqlite3
 from cement.core.interface import Interface
 from cement.core import handler
 from cement import minimal_logger
