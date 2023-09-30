@@ -32,6 +32,7 @@ class Base(Controller):
         """Default action if no sub-command is passed."""
 
         self.app.args.print_help()
+        print(self.app.sqlite3.get_dbfile())
 
 
     # @ex(

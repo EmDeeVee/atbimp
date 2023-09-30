@@ -1,3 +1,4 @@
+import os
 from pytest import raises
 from atbimp.main import AtbImpAppTest
 
@@ -15,6 +16,13 @@ def test_atbimp_debug():
         app.run()
         assert app.debug is True
 
+def test_atbimp_ext_sqlite():
+    # test that sqlite extension is functional
+    argv = ['--debug']
+    with AtbImpAppTest(argv=argv) as app:
+        app.run()
+        app.sqlite3.set_dbfile('test.db3')
+        assert os.path.basename(app.sqlite3.get_dbfile()) == 'test.db3'
 
 # def test_command1():
 #     # test command1 without arguments

@@ -113,6 +113,7 @@ class AtbImpApp(App):
             'yaml',
             'colorlog',
             'jinja2',
+            'atbimp.ext.ext_sqlite3',
         ]
 
         # configuration handler
