@@ -21,9 +21,19 @@ def test_atbimp_ext_sqlite():
     argv = ['--debug']
     with AtbImpAppTest(argv=argv) as app:
         app.run()
-        app.sqlite3.set_dbfile('test.db3')
+        app.sqlite3.set_dbfile('./tests/test.db3')
         assert os.path.basename(app.sqlite3.get_dbfile()) == 'test.db3'
 
+def test_atbimp_ext_sqlite_connect():
+    # test that sqlite is creating a database file
+    with AtbImpAppTest() as app:
+        app.run()
+        app.sqlite3.set_dbfile('./tests/test.db3')
+        db_file=app.sqlite3.get_dbfile()
+        app.sqlite3.connect()
+        assert os.path.exists(db_file)
+        os.remove(db_file)
+        
 # def test_command1():
 #     # test command1 without arguments
 #     argv = ['command1']

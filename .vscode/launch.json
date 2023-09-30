@@ -5,6 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "atbimp no args",
+            "type": "python",
+            "request": "launch",
+            "program": "env/bin/atbimp",
+            "args": "-d",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
             "name": "atbimp csv check",
             "type": "python",
             "request": "launch",
@@ -12,6 +21,6 @@
             "args": "-d csv check data/1979-22.csv",
             "console": "integratedTerminal",
             "justMyCode": true
-        }
+        },
     ]
 }

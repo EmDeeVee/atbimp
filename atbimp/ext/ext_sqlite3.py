@@ -3,12 +3,11 @@
 SQlite 3 wrapper for cement
 '''
 import os
+import sqlite3
 from cement.core.interface import Interface
 from cement.core import handler
 from cement import minimal_logger
 from cement.utils import fs
-
-# import sqlite3
 
 LOG = minimal_logger(__name__)
 
@@ -54,11 +53,11 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
 
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
+        self._sqlite3 =  __import__(self.Meta.sqlite3_module, 
+                                   globals(), locals(), 0)
 
     def __setup__(self, app):
         super()._setup(app)
-        self._sqlite3 = __import__(self.meta.sqlite3_module, 
-                                   globals(), locals(), 0)
 
     def set_dbfile(self, db_file: str):
         ''' set the db_file and create parent dir if needed '''
