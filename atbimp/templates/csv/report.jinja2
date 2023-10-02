@@ -1,0 +1,21 @@
+
+
+****************************************************************
+                 CSV Check/Import Report
+****************************************************************
+
+File checked:           {{ report.fileChecked }}
+Lines found in file:    {{ report.linesRead }}
+Data lines in file:     {{ report.dataLinesFound }}
+
+----------------------- Errors found ---------------------------
+Incorrect date format:  {{ report.incorrectDate }}
+Leading quote:          {{ report.leadingQuote }}
+Trailing comma:         {{ report.trailingComma }}
+
+----------------------- Import Stats ---------------------------
+Records imported:       {{ report.recordsImported }}
+SQL Import Errors:      {{ report.sqlInsertErrors }}
+
+****************************************************************
+
