@@ -113,3 +113,46 @@ def test_ext_sqlite_show_tables_test_filter():
         ret = app.sqlite3.show_tables('test_')
         assert len(ret) == 3 and ret[0]['name'] == 'test1' and ret[1]['name'] == 'test2' and ret[2]['name'] == 'test3'
         sqlite_cleanup(app)
+
+def test_ext_sqlite_select_foo_as_string():
+    # Test basic select command
+
+    with AtbImpAppTest() as app:
+        app.run()
+        sqlite_connect(app)
+        ret = app.sqlite3.select("'foo'")
+        assert ret[0]["'foo'"] == 'foo'
+        sqlite_cleanup(app)
+
+def test_ext_sqlite_select_bar_as_dict():
+    # Test basic select command
+
+    with AtbImpAppTest() as app:
+        app.run()
+        sqlite_connect(app)
+        ret = app.sqlite3.select({'query': "'bar'"})
+        assert ret[0]["'bar'"] == 'bar'
+        sqlite_cleanup(app)
+
+
+def test_ext_sqlite_select_count_as_string():
+    # Test select on actual table
+
+    with AtbImpAppTest() as app:
+        app.run()
+        sqlite_connect(app)
+        app.sqlite3.create_table(sqlite_create_test_model())
+        ret = app.sqlite3.select("COUNT(id) FROM test")
+        assert ret[0]['COUNT(id)'] == 0
+        sqlite_cleanup(app)
+        
+def test_ext_sqlite_select_count_as_dict():
+    # Test select on actual table 
+
+    with AtbImpAppTest() as app:
+        app.run()
+        sqlite_connect(app)
+        app.sqlite3.create_table(sqlite_create_test_model())
+        ret = app.sqlite3.select({'query': 'COUNT(id)', 'from': 'test'})
+        assert ret[0]['COUNT(id)'] == 0
+        sqlite_cleanup(app)

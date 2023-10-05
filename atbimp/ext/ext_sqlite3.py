@@ -216,7 +216,6 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         stmt = f"SELECT * FROM sqlite_schema {filter}"
         try:
             self._cur.execute(stmt)
-            self._con.commit()
             models = self._cur.fetchall()
         except:
             raise ConnectionError
@@ -229,7 +228,61 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
 
         return ret
 
-                                                  
+    def select(self, query):
+        '''
+        select()        select statment
+        
+        parameters:     query {string|dict}
+                            {string}    with the select clause optionally with FROM or WHEN or 
+                                        LIMIT or JOIN clauses
+
+                            {dict}      dict in the form:
+                                        {
+                                            'query':    "WHAT TO SELECT",   # mandatory
+                                            'from':     <from_clause>,      # optional
+                                            'clauses': [  
+                                                'group_by': <group_by_clause>'  #
+                                                'where':    <where_clause>,     # optional
+                                                'limit':    <limit_clause>,     # optional
+                                                etc ...
+                                            ]
+                                        }
+
+                                The 'select' is mandatory. The from is optional.  In the clauses
+                                any valid SQL clause will go.  The name of the clause will be 
+                                CAPITALIZED and undersocres replaced by spaces.
+                                    so:  'group_by': 'date'         -> "GROUP BY date" 
+                                    and: 'having': 'COUNT(id) > 3'  -> "HAVING COUNT(id) > 3
+
+        Return:
+                    Array of dicts
+        '''            
+        if type(query) == str:
+            stmt = f"SELECT {query};"
+        elif type(query) == dict:
+            stmt = f"SELECT {query['query']}"
+            if 'from' in query and len(query['from']):
+                stmt += f" FROM {query['from']}"
+
+            # FIXME: Need to add the clauses
+        else:
+            raise ValueError
+        
+        try:
+            self._cur.execute(stmt)
+            res = self._cur.fetchall()
+        except:
+            raise ConnectionError
+        
+        labels = tuple(x[0] for x in self._cur.description)
+        ret = []
+        for row in res:
+            ret.append(self._mkdict(labels, row))
+
+        return ret
+
+
+    
                         
     def close(self):
         ''' close the connection '''
