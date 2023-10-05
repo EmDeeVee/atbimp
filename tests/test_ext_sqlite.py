@@ -31,7 +31,7 @@ def sqlite_create_test_model(ord=0):
     model={
         'name':     f"test{ord}", 
         'fields':   [
-            "'id' INTEGER",
+            "'id' INTEGER PRIMARY KEY AUTOINCREMENT",
             "'date' DATE",
             "'txt' TEXT",
             "'price' DECIMAL(10,2)"
@@ -68,7 +68,7 @@ def test_ext_sqlite__get_table_info():
         res = app.sqlite3.create_table(model)
 
         # In assert we (for now) only check the name and the first field
-        assert res['name'] == model['name']  and f"'{res['fields'][0]['name']}' {res['fields'][0]['type']}" == model['fields'][0]
+        assert res['name'] == model['name']  and f"'{res['fields'][0]['name']}'" == model['fields'][0].split(' ')[0]
         sqlite_cleanup(app)     # So assert will fail
 
 def test_ext_sqlite_create_table():

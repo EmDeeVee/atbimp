@@ -211,9 +211,9 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         '''
 
         if len(filter):
-            filter = f"WHERE [name] LIKE '{filter}'"
+            filter = f"AND [name] LIKE '{filter}'"
 
-        stmt = f"SELECT * FROM sqlite_schema {filter}"
+        stmt = f"SELECT * FROM sqlite_schema WHERE NAME NOT LIKE 'sqlite_%' {filter}"
         try:
             self._cur.execute(stmt)
             models = self._cur.fetchall()
