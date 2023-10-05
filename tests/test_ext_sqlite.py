@@ -95,6 +95,7 @@ def test_ext_sqlite_show_tables_no_filter():
         
         ret = app.sqlite3.show_tables()
         assert ret[0]['name'] == 'test1' and ret[1]['name'] == 'test2' and ret[2]['name'] == 'test3'
+        sqlite_cleanup(app)
 
 def test_ext_sqlite_show_tables_test_filter():
     # Test the show_tables() function with no filter
@@ -111,3 +112,4 @@ def test_ext_sqlite_show_tables_test_filter():
         # This shoudl only return 3 tables
         ret = app.sqlite3.show_tables('test_')
         assert len(ret) == 3 and ret[0]['name'] == 'test1' and ret[1]['name'] == 'test2' and ret[2]['name'] == 'test3'
+        sqlite_cleanup(app)

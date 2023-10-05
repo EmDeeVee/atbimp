@@ -119,7 +119,7 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         for fld in fields:
             # PRAGMA table_info returns a cid (column id) as the first
             # item in the tuple.  We have no use for that. Hence fld[1:]
-            #
+            # and labels[1:]
             dictFld = self._mkdict(labels[1:], fld[1:])
             ret['fields'].append(dictFld)
 
