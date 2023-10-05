@@ -106,7 +106,6 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         if len(tbl) == 0:
             raise ValueError
         
-        labels = ('name', 'type', 'notnull', 'dflt_value', 'pk')
         try:
             stmt = f"PRAGMA table_info({tbl})"
             res = self._cur.execute(stmt)
@@ -115,11 +114,13 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
             raise ConnectionError
 
         ret = {'name': 'test', 'fields': []}
+        labels = tuple(x[0] for x in self._cur.description)
+
         for fld in fields:
             # PRAGMA table_info returns a cid (column id) as the first
             # item in the tuple.  We have no use for that. Hence fld[1:]
             #
-            dictFld = self._mkdict(labels, fld[1:])
+            dictFld = self._mkdict(labels[1:], fld[1:])
             ret['fields'].append(dictFld)
 
         return ret
@@ -220,7 +221,7 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         except:
             raise ConnectionError
         
-        labels = ('type', 'name', 'tbl_name', 'rootpage', 'sql')
+        labels = tuple(x[0] for x in self._cur.description)
         ret = []
         for model in models:
             model_info = self._mkdict(labels, model)
