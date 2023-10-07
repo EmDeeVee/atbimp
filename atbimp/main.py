@@ -58,6 +58,7 @@ CREATE INDEX idx_transaction_id ON transactions ("transaction_id")
 """
 
 def extend_sqla(app):
+    # TODO:  Remove the SQLAlcheme and use our extention instead.
     app.log.info('Extending App with SQLAlchemy (Sqlite3)')
     db_file = app.config.get('atbimp', 'db_file')
 

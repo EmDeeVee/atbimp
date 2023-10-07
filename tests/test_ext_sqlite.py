@@ -6,6 +6,10 @@ ext_sqlite3 tests.   Tests for the sqlite3 extention designed to
 work with the cement framework. 
 
     TODO: Separate the tests from the AtbImpApp. 
+    Still need cement some how.  Since the extention requires
+    an (app) to work with.  Therefore standalone unit testing
+    would require further abstraction and with that kinda kills 
+    the design decision to create an extension for cement.
 
 '''
 
