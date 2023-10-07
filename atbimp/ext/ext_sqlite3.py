@@ -289,11 +289,15 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
             stmt = f"SELECT {query};"
         elif type(query) == dict:
             stmt = f"SELECT {query['query']}"
-            if 'from' in query and len(query['from']):
-                stmt += f" FROM {query['from']}"
+            if 'from' in query:
+                if type(query['from'] == str):
+                    stmt += f" FROM {query['from']}"
+                elif type(query['from']) == tuple or type(query['from']) == list:
+                    stmt += f" FROM {','.join(query['from'])}"
+                else:
+                    raise ValueError
 
             # FIXME: select() Need to add the clauses
-            # FIXME: Select() coud have a list tables in from
             # TODO:  select() Write more extensive tests
         else:
             raise ValueError

@@ -1,4 +1,4 @@
-import os
+import os,random
 from pytest import raises
 from atbimp.main import AtbImpAppTest
 '''
@@ -50,13 +50,18 @@ def sqlite_create_test_model(ord=0):
     }
     return model
 
-def sqlite_create_insert_dict(model):
+def sqlite_create_insert_dict(model, cnt=1):
     ''' Helper fuction to create dict for insert statment '''
     ins = {
         'into': model,
         'cols': ('date', 'txt', 'price'),
-        'values': ('#CURRENT_DATE', 'banana', 3.25)
     }
+    if cnt == 1:
+        fruits=('banana', 'apple', 'pear', 'raspbery', 'fig', 'pineapple')
+        fruitIdx = random.randint(0,5)
+    
+    ins['values'] = ('#CURRENT_DATE', fruits[fruitIdx], int(random.random()*10000)/100)
+
     return ins
 
 
@@ -233,6 +238,71 @@ def test_ext_sqlite_insert_multiple_as_dict_with_empty_value():
         sqlite_cleanup(app)
 
 
-# def test_ext_sqlite_select_from_multiple_tables_as_string():
+def test_ext_sqlite_select_from_multiple_tables_as_string():
     # Test a select statment using two tables
     
+    with AtbImpAppTest() as app:
+        app.run()
+        sqlite_connect(app)
+
+        # first create two tables
+        app.sqlite3.create_table(sqlite_create_test_model(1))
+        app.sqlite3.create_table(sqlite_create_test_model(2))
+
+        # Insert 1 row in test1 and two rows in test2
+        app.sqlite3.insert(sqlite_create_insert_dict('test1'))
+        app.sqlite3.insert(sqlite_create_insert_dict('test2'))
+        app.sqlite3.insert(sqlite_create_insert_dict('test2'))
+
+        res = app.sqlite3.select("* FROM test1,test2")
+        assert len(res) == 2
+        sqlite_cleanup(app)
+
+
+def test_ext_sqlite_select_from_multiple_tables_as_dict_from_tuple():
+    # Test a select statment using two tables
+    
+    with AtbImpAppTest() as app:
+        app.run()
+        sqlite_connect(app)
+
+        # first create two tables
+        app.sqlite3.create_table(sqlite_create_test_model(1))
+        app.sqlite3.create_table(sqlite_create_test_model(2))
+
+        # Insert 1 row in test1 and two rows in test2
+        app.sqlite3.insert(sqlite_create_insert_dict('test1'))
+        app.sqlite3.insert(sqlite_create_insert_dict('test2'))
+        app.sqlite3.insert(sqlite_create_insert_dict('test2'))
+
+        qry = {
+            'query': '*',
+            'from':  ('test1', 'test2')
+        }
+        res = app.sqlite3.select("* FROM test1,test2")
+        assert len(res) == 2
+        sqlite_cleanup(app)
+
+def test_ext_sqlite_select_from_multiple_tables_as_dict_from_list():
+    # Test a select statment using two tables
+    
+    with AtbImpAppTest() as app:
+        app.run()
+        sqlite_connect(app)
+
+        # first create two tables
+        app.sqlite3.create_table(sqlite_create_test_model(1))
+        app.sqlite3.create_table(sqlite_create_test_model(2))
+
+        # Insert 1 row in test1 and two rows in test2
+        app.sqlite3.insert(sqlite_create_insert_dict('test1'))
+        app.sqlite3.insert(sqlite_create_insert_dict('test2'))
+        app.sqlite3.insert(sqlite_create_insert_dict('test2'))
+
+        qry = {
+            'query': '*',
+            'from':  ['test1', 'test2']
+        }
+        res = app.sqlite3.select("* FROM test1,test2")
+        assert len(res) == 2
+        sqlite_cleanup(app)
