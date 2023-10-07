@@ -55,6 +55,11 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
     def __setup__(self, app):
         super()._setup(app)
 
+
+    # ========================================================================
+    # Helper Functions
+    # ========================================================================
+
     def _mkdict(self, labels, values):
         # Create a dict from two tubles
         if len(labels) > 0 and len(values) > 0 and len(labels) == len(values):
@@ -125,8 +130,31 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
 
         return ret
 
-        
 
+    def _values2str(self, values):
+        # Convert tuple of values into a string, unquoting sqlite statments that start with a '#'
+        ret = ""
+        for value in values:
+            if type(value) == str:
+                if value[0] == '#':
+                    ret += f"{value[1:]}"       # Will only insert the contents of value
+                else:
+                    ret += f"'{value}'"         # make this an sqlite string literal 
+            elif type(value) == int or type(value) == float:
+                ret += f"{value}"
+            else:
+                raise ValueError
+             
+            ret += ', '                    
+    
+        # We couldn't use join() so remove the last 'comma space'
+        return ret[:-2]
+
+
+    # ========================================================================
+    # Interface Functions
+    # ========================================================================
+        
     def set_dbfile(self, db_file: str):
         ''' set the db_file and create parent dir if needed '''
         self._db_file = fs.abspath(db_file)
@@ -264,7 +292,9 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
             if 'from' in query and len(query['from']):
                 stmt += f" FROM {query['from']}"
 
-            # FIXME: Need to add the clauses
+            # FIXME: select() Need to add the clauses
+            # FIXME: Select() coud have a list tables in from
+            # TODO:  select() Write more extensive tests
         else:
             raise ValueError
         
@@ -281,9 +311,84 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
 
         return ret
 
+    def insert(self, insert):
+        '''
+        insert()            Insert statment.
 
-    
+        parameters:     query {string|dict}
+                            {string}    with the insert clause optionally requeres the insert 
+                                        operation keyword like INTO or OR REPLACE.
+                                        eg:)
+                                            sqlite3.insert('INTO test(txt,price) VALUES('banana', 3.25))
+                                            sqlite3.insert('OR REPLACE ......')
+
+                                        basically a valid sqlite insert statement without the INSERT 
+                                        keyword.
+
+                            {dict}      dict in the form:
+                                        {
+                                            'into':    <table>,         # string
+                                            'cols':    <cols>,          # tuple
+                                            'values':  <tuple|list of tuples>
+                                        }
+
+                                        values can either be a tuple ('banana', 3.0) or a 
+                                        list of tuples: [('banana', 3.0),('Apple', 3000.00)]
+
+                                        When you want to use an Sqlite keyword as a value, you have
+                                        to prefix it with a has (#), so python will validate it a a
+                                        string but in the acutual build of the statement the enclosing
+                                        quotes will be remved.
+
+                                        eg: 
+                                            {
+                                                'into':     'todo',
+                                                'cols':     ('date', 'item', 'notes'),
+                                                'values':   ('#CURRENT_DATE', 'Picup my new car', 'Yeah!')
+                                            }
+
+        Returns:
+            rows affected
+
+        Raises:
+            ValueError:         dict in improper format
+            ConnectionError:    Error in statement.
+
+        '''
+        if type(insert) == str:
+            stmt = f"INSERT {insert};"
+        elif type(insert) == dict:
+            stmt = f"INSERT INTO {insert['into']}"
+            if 'cols' in insert and len(insert['cols']):
+                stmt += f"{insert['cols']}"
+            if 'values' in insert:
+                if type(insert['values']) == tuple:
+                    stmt += f" VALUES ({self._values2str(insert['values'])})"
+                elif type(insert['values']) == list:
+                    # Handle list of tuples
+                    stmt += f" VALUES"
+                    for row in insert['values']:
+                        if type(row) == tuple:
+                            stmt += f"({self._values2str(row)}),"
+                        else:
+                            raise ValueError
                         
+                    # Remove trailing comma
+                    stmt = stmt[:-1]
+                else:
+                    raise ValueError
+        else:
+            raise ValueError
+
+        try:
+            self._cur.execute(stmt)
+            self._con.commit()
+        except:
+            raise ConnectionError
+
+        return self._cur.rowcount        
+
+        
     def close(self):
         ''' close the connection '''
         self._con.close()

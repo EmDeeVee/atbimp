@@ -1,6 +1,13 @@
 import os
 from pytest import raises
 from atbimp.main import AtbImpAppTest
+'''
+ext_sqlite3 tests.   Tests for the sqlite3 extention designed to
+work with the cement framework. 
+
+    TODO: Separate the tests from the AtbImpApp. 
+
+'''
 
 # ===============================================================
 # Helper Functions
@@ -155,4 +162,64 @@ def test_ext_sqlite_select_count_as_dict():
         app.sqlite3.create_table(sqlite_create_test_model())
         ret = app.sqlite3.select({'query': 'COUNT(id)', 'from': 'test'})
         assert ret[0]['COUNT(id)'] == 0
+        sqlite_cleanup(app)
+
+def test_ext_sqlite_insert_as_str():
+    # Test insert statment as a string
+
+    with AtbImpAppTest() as app:
+        app.run()
+        sqlite_connect(app)
+        app.sqlite3.create_table(sqlite_create_test_model())
+        rowsAffected = app.sqlite3.insert("INTO test(date, txt, price) VALUES (CURRENT_DATE, 'test', 99.25)")
+        assert rowsAffected == 1
+        sqlite_cleanup(app)
+
+def test_ext_sqlite_insert_as_str_multiple_rows():
+    # Test insert statment as a string
+
+    with AtbImpAppTest() as app:
+        app.run()
+        sqlite_connect(app)
+        app.sqlite3.create_table(sqlite_create_test_model())
+        rowsAffected = app.sqlite3.insert("INTO test(date, txt, price) VALUES (CURRENT_DATE, 'bannana', 1.25),(CURRENT_DATE, 'pear', 4.25),(CURRENT_DATE, 'apple', 99.25)")
+        assert rowsAffected == 3
+        sqlite_cleanup(app)
+
+def test_ext_sqlite_insert_as_dict():
+    # Test insert statment as a dict with single value
+
+    with AtbImpAppTest() as app:
+        app.run()
+        sqlite_connect(app)
+        app.sqlite3.create_table(sqlite_create_test_model())
+        ins = {
+            'into': 'test',
+            'cols': ('date', 'txt', 'price'),
+            'values': ('#CURRENT_DATE', 'banana', 3.25)
+        }
+        rowsAffected = app.sqlite3.insert(ins)
+        assert rowsAffected == 1
+        sqlite_cleanup(app)
+
+def test_ext_sqlite_insert_multiple_as_dict_with_empty_value():
+    # Test insert statment as a dict with multiple values and 
+    # a trailing comma implying an empty value tuple
+
+    with AtbImpAppTest() as app:
+        app.run()
+        sqlite_connect(app)
+        app.sqlite3.create_table(sqlite_create_test_model())
+        ins = {
+            'into': 'test',
+            'cols': ('date', 'txt', 'price'),
+            'values': [
+                ('#CURRENT_DATE', 'banana', 3.25),
+                ('#CURRENT_DATE', 'apple', 2349.95),
+                ('#CURRENT_DATE', 'pear', 47.505),
+                ('#CURRENT_DATE', 'raspberry', 25),         # Our false trailing comma
+            ]
+        }
+        rowsAffected = app.sqlite3.insert(ins)
+        assert rowsAffected == 4
         sqlite_cleanup(app)
