@@ -50,6 +50,15 @@ def sqlite_create_test_model(ord=0):
     }
     return model
 
+def sqlite_create_insert_dict(model):
+    ''' Helper fuction to create dict for insert statment '''
+    ins = {
+        'into': model,
+        'cols': ('date', 'txt', 'price'),
+        'values': ('#CURRENT_DATE', 'banana', 3.25)
+    }
+    return ins
+
 
 # ===============================================================
 # Test Functions
@@ -197,12 +206,7 @@ def test_ext_sqlite_insert_as_dict():
         app.run()
         sqlite_connect(app)
         app.sqlite3.create_table(sqlite_create_test_model())
-        ins = {
-            'into': 'test',
-            'cols': ('date', 'txt', 'price'),
-            'values': ('#CURRENT_DATE', 'banana', 3.25)
-        }
-        rowsAffected = app.sqlite3.insert(ins)
+        rowsAffected = app.sqlite3.insert(sqlite_create_insert_dict('test'))
         assert rowsAffected == 1
         sqlite_cleanup(app)
 
@@ -227,3 +231,8 @@ def test_ext_sqlite_insert_multiple_as_dict_with_empty_value():
         rowsAffected = app.sqlite3.insert(ins)
         assert rowsAffected == 4
         sqlite_cleanup(app)
+
+
+# def test_ext_sqlite_select_from_multiple_tables_as_string():
+    # Test a select statment using two tables
+    
