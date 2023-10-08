@@ -290,7 +290,7 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         elif type(query) == dict:
             stmt = f"SELECT {query['query']}"
             if 'from' in query:
-                if type(query['from'] == str):
+                if type(query['from']) == str:
                     stmt += f" FROM {query['from']}"
                 elif type(query['from']) == tuple or type(query['from']) == list:
                     stmt += f" FROM {','.join(query['from'])}"

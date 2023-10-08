@@ -279,7 +279,7 @@ def test_ext_sqlite_select_from_multiple_tables_as_dict_from_tuple():
             'query': '*',
             'from':  ('test1', 'test2')
         }
-        res = app.sqlite3.select("* FROM test1,test2")
+        res = app.sqlite3.select(qry)
         assert len(res) == 2
         sqlite_cleanup(app)
 
@@ -303,6 +303,6 @@ def test_ext_sqlite_select_from_multiple_tables_as_dict_from_list():
             'query': '*',
             'from':  ['test1', 'test2']
         }
-        res = app.sqlite3.select("* FROM test1,test2")
+        res = app.sqlite3.select(qry)
         assert len(res) == 2
         sqlite_cleanup(app)
