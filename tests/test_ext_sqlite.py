@@ -64,6 +64,21 @@ def sqlite_create_insert_dict(model, cnt=1):
 
     return ins
 
+def sqlite_create_10_insert_for_select_clauses():
+    ''' Create an insert statement with 10 Test rows for select clauses testing '''
+    ret = '''INTO test(txt,price) VALUES
+        ('test_1', 1.0),
+        ('test_2', 2.0),
+        ('test_3', 3.0),
+        ('test_4', 0.0),
+        ('test_5', 1.0),
+        ('test_6', 2.0),
+        ('test_7', 3.0),
+        ('test_8', 0.0),
+        ('test_9', 1.0),
+        ('test_10', 2.0)
+    '''
+    return ret
 
 # ===============================================================
 # Test Functions
@@ -306,3 +321,30 @@ def test_ext_sqlite_select_from_multiple_tables_as_dict_from_list():
         res = app.sqlite3.select(qry)
         assert len(res) == 2
         sqlite_cleanup(app)
+
+def test_sqlite_ext_select_with_clauses_dict():
+    # Test the select clauses function of the dict
+
+    with AtbImpAppTest() as app:
+        app.run()
+        sqlite_connect(app)
+
+        # Create our test model
+        app.sqlite3.create_table(sqlite_create_test_model())
+        
+        # insert 10 rows
+        app.sqlite3.insert(sqlite_create_10_insert_for_select_clauses())
+
+        # Build our query
+        qry = {
+            'query': 'txt,price',
+            'from': 'test',
+            'clauses': {
+                'where': 'price>0',
+                'group_by': 'price'
+            }
+        }
+        res = app.sqlite3.select(qry)
+        assert len(res) == 3
+        sqlite_cleanup(app)
+

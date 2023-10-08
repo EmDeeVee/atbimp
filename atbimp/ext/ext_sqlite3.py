@@ -266,39 +266,55 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
 
                             {dict}      dict in the form:
                                         {
-                                            'query':    "WHAT TO SELECT",   # mandatory
-                                            'from':     <from_clause>,      # optional
-                                            'clauses': [  
-                                                'group_by': <group_by_clause>'  #
-                                                'where':    <where_clause>,     # optional
-                                                'limit':    <limit_clause>,     # optional
-                                                etc ...
-                                            ]
+                                            'query':    <select> ::= <str>|<dict>|<list>,
+                                            'from':     [<from>  ::= <str>|<dict>|<list>],
+                                            'where':    [<where> ::= <str>],
+                                            'clauses': {                    # additional clauses
+                                                'group_by': [<group_by_clause> ::= <str>],  
+                                                'limit':    [<limit_clause> ::= <str>],    
+                                                etc ...     [<valid_clause> ::= <str>]
+                                            }
                                         }
 
-                                The 'select' is mandatory. The from is optional.  In the clauses
-                                any valid SQL clause will go.  The name of the clause will be 
-                                CAPITALIZED and undersocres replaced by spaces.
+                                The 'query' is mandatory. The 'from', 'where' and 'clauses'  are 
+                                optional.  In the 'clauses' section, any valid SQL clause will go.  
+                                The name of the clause will be  CAPITALIZED and undersocres 
+                                replaced by spaces.
                                     so:  'group_by': 'date'         -> "GROUP BY date" 
                                     and: 'having': 'COUNT(id) > 3'  -> "HAVING COUNT(id) > 3
 
         Return:
                     Array of dicts
         '''            
+
+        
         if type(query) == str:
+            # query as string.  easy
             stmt = f"SELECT {query};"
+
         elif type(query) == dict:
+            # query as dict.  A bit more work
             stmt = f"SELECT {query['query']}"
             if 'from' in query:
+                # from section
                 if type(query['from']) == str:
                     stmt += f" FROM {query['from']}"
                 elif type(query['from']) == tuple or type(query['from']) == list:
                     stmt += f" FROM {','.join(query['from'])}"
                 else:
                     raise ValueError
+                
+            if 'where' in query:
+                # where section and
+                if type(query['where']) == str:
+                    stmt += f" WHERE {query['where']}"
+                else:
+                    raise ValueError
 
-            # FIXME: select() Need to add the clauses
-            # TODO:  select() Write more extensive tests
+            # Clauses
+            if 'clauses' in query:
+                for clause in query['clauses']:
+                    stmt += f" {clause.upper().replace('_', ' ')} {query['clauses'][clause]}"
         else:
             raise ValueError
         
