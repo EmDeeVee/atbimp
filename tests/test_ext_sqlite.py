@@ -348,3 +348,16 @@ def test_sqlite_ext_select_with_clauses_dict():
         assert len(res) == 3
         sqlite_cleanup(app)
 
+def test_ext_sqlite_create_index_as_string():
+    # test the create_index command
+
+    with AtbImpAppTest() as app:
+        app.run()
+
+        sqlite_connect(app)
+        app.sqlite3.create_table(sqlite_create_test_model())
+        ret = app.sqlite3.create_index('test_idx ON test(id,date)')
+        assert ret
+        sqlite_cleanup(app)
+
+

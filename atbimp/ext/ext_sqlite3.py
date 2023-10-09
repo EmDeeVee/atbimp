@@ -256,6 +256,27 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
 
         return ret
 
+
+    def create_index(self, index):
+        ''' Create index on Model.'''
+        
+        # Sanity check
+        if len(index) == 0:
+            raise ValueError
+        
+        # Create our statment.
+        if type(index) == str:
+            stmt = f"CREATE INDEX {index}"
+        
+        # execute our statment
+        try:
+            self._cur.execute(stmt)
+            self._con.commit()
+        except:
+            raise ConnectionError
+        
+        return True
+        
     def select(self, query):
         '''
         select()        select statment
