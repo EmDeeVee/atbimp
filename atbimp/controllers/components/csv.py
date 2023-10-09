@@ -76,7 +76,7 @@ class CsvWriter():
     '''
     def __init__(self) -> None:
         self.writer=None                   # Hold the csv writer object
-        self.fh_writer=None                # file handle for the writer
+        self.fd_writer=None                # file handle for the writer
     
     # Open the csv file
     def open(self,csvfile):
@@ -84,8 +84,8 @@ class CsvWriter():
             return False
         
         try:
-            self.fh_writer = open(csvfile)
-            self.writer = csv.writer(self.fh_writer)
+            self.fd_writer = open(csvfile, "w")
+            self.writer = csv.writer(self.fd_writer)   
         except:
             return False
         
@@ -96,27 +96,19 @@ class CsvWriter():
         # Simply write back the header that was found by the Reader
         pass
 
-    # Write the next line
-    def writeline(self, data):
+    # Write a line of data. 
+    def writeline(self, data):        
+        bytesWrittem = 0
         try:
-            row = self.reader.__next__()
-            return row
-        
+            bytesWritten = self.writer.writerow(data)
         except:
-            return None
-        
-    # Convert row to dict
-    def row2dict(self, labels, row) -> dict:
-        dct = {}
-        try:
-            for i,fld in enumerate(row):
-                dct[labels[i]] = row[i]
+            raise ConnectionError
 
-        except:
-            return None
-        
-        return dct
+        return bytesWritten
 
+
+        
+        
     # Pick up your mess before you leave.
     def __del__(self):
         if not self.fh_writer is None:
