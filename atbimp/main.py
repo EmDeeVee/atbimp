@@ -57,46 +57,6 @@ CONFIG['atbimp']['create_idx_transactions'] = """
 CREATE INDEX idx_transaction_id ON transactions ("transaction_id")
 """
 
-def extend_sqla(app):
-    # TODO:  Remove the SQLAlcheme and use our extention instead.
-    app.log.info('Extending App with SQLAlchemy (Sqlite3)')
-    db_file = app.config.get('atbimp', 'db_file')
-
-    # ensure that we extend the full path
-    db_file = fs.abspath(db_file)
-    app.log.info("Database file is in: %s" % db_file)
-
-    # ensure that the parent directory exists
-    db_dir = os.path.dirname(db_file)
-    if not os.path.exists(db_dir):
-        os.makedirs(db_dir)
-    
-    # Create our db engine
-    try:
-        db=create_engine("sqlite+pysqlite:///%s" % db_file)
-    except:
-        app.log.error('Cannot create DB engine! Aborting ... check config or requirements')
-    else:
-
-        # Create our actual db file if none is there
-        if not os.path.exists(db_file):
-            app.log.info('Initial DB configuration')
-
-            # Create our tables
-            try:
-                with db.connect() as conn:
-                    app.log.info('-- Creating table_import ...')
-                    conn.execute(text(app.config.get('atbimp', 'create_table_import')))
-                    app.log.info('-- Creating table_transactions ...')
-                    conn.execute(text(app.config.get('atbimp', 'create_table_transactions')))
-                    app.log.info('-- Creating idx_transactions ...')
-                    conn.execute(text(app.config.get('atbimp', 'create_idx_transactions')))
-            except:
-                app.log.error('Cannot create tables!')
-
-                # Mount it to our app
-                app.extend('db', db)
-
 class AtbImpApp(App):
     """ATB CSV Import and List Application primary application."""
 
@@ -136,9 +96,7 @@ class AtbImpApp(App):
         ]
 
         # hooks
-        hooks = [
-            ('post_argument_parsing', extend_sqla)
-        ]
+        hooks = []
 
 
 class AtbImpAppTest(TestApp,AtbImpApp):
