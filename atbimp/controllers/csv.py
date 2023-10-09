@@ -1,6 +1,6 @@
 import os
 from cement import Controller, ex
-from .components.cvsreader import CsvReader
+from .components.csv import CsvReader, CsvWriter
 
 
 
@@ -25,12 +25,14 @@ class Csv(Controller):
     # Report Dict
     chkreport = {
         "fileChecked":       "",      # The file we are checking
+        "fileExported":      "n/a",   # The file the export was written to
         "linesRead":         0,       # Total number of lines in the file
         "dataLinesFound":    0,       # Total number of data lines found
         "incorrectDate":     0,       # Total number of lines with incorrect date
         "leadingQuote":      0,       # Total number of lines with a leading quote
         "trailingComma":     0,       # Total number of lines with a trailing comma 
         "recordsImported":   0,       # Total number of records imported.
+        "recordsExported":   0,       # Total number of records imported.
     }
 
     
@@ -101,8 +103,8 @@ class Csv(Controller):
             aliases=['check'],
             arguments=[(
                 ['csv_file'],{
-                'help': 'csv file to check',
-                'action': 'store',
+                    'help': 'csv file to check',
+                    'action': 'store',
                 }
             )])
     def chk(self):
@@ -135,11 +137,71 @@ class Csv(Controller):
         # Last line doesn't count
         self.chkreport["linesRead"]-=1
 
-    # Looks like we're all done.  Let's print the results.
+        # Looks like we're all done.  Let's print the results.
         #
         data = {}
         data["report"] = self.chkreport
         self.app.render(data, 'csv/report.jinja2')
+
+    # exp: export
+    #
+    @ex(
+            help='dump the checked and corrected lines back into an export file',
+            aliases=['export'],
+            arguments=[
+                (['csv_file'],{
+                    'help': 'file to read data from',
+                    'action': 'store'
+                }),
+                (['exp_file'],{
+                    'help': 'file to export data to',
+                    'action': 'store'
+                })
+            ]
+        )
+    def exp(self):
+        '''
+        exp | export <csv_file> <exp_file>     check the csv file for know ATB csv issues.  
+        '''
+        csv_file = self.app.pargs.csv_file
+        exp_file = self.app.pargs.exp_file
+
+        db_tbl_cols = self.app.config.get('atbimp', 'db_tbl_cols')
+
+        self.app.log.info("Checking csv file: %s" % csv_file)
+        self.chkreport["fileChecked"] = csv_file
+
+        # See if file exists and we can open this
+        reader = CsvReader()
+        if not reader.open(csv_file):
+            self.app.log.error(f'Error reading from csv file: {csv_file}')
+            return None
+        
+        writer = CsvWriter()
+        if not writer.open(exp_fle):
+            self.app.log.error(f'Error opening export file: {exp_file}')
+
+            
+
+        row = reader.readline(); self.chkreport["linesRead"]+=1
+        if reader.isHeaderLine(row):
+            self.app.log.warning('  - Skipping header line: (1)%s....' % row[0])
+            # Get another one
+            row = reader.readline(); self.chkreport["linesRead"]+=1
+
+        while not row is None:
+            self._check_row(row) ; self.chkreport["dataLinesFound"]+=1
+            row = reader.readline(); self.chkreport["linesRead"]+=1
+
+        # Last line doesn't count
+        self.chkreport["linesRead"]-=1
+
+        # Looks like we're all done.  Let's print the results.
+        #
+        data = {}
+        data["report"] = self.chkreport
+        self.app.render(data, 'csv/report.jinja2')
+
 
     # mrg: merge
     # 
