@@ -178,7 +178,7 @@ class Csv(Controller):
             return None
         
         writer = CsvWriter()
-        if not writer.open(exp_fle):
+        if not writer.open(exp_file):
             self.app.log.error(f'Error opening export file: {exp_file}')
 
             

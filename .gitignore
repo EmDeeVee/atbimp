@@ -108,3 +108,8 @@ venv.bak/
 data/
 *.db
 *.db3
+
+# test data
+tests/*.txt
+tests/*.db
+tests/*.db3
