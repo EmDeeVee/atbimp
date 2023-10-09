@@ -127,12 +127,13 @@ def test_csv_create_writer():
 
 def test_csv_writer_write_row_as_list():
     # Can we write a line of data as a string
+    res = 0             # Number of bytes written
     if create_writefile():
         writer = CsvWriter()
         if writer.open(writeFile):
             res = writer.writeline(lDataLine)
 
-    assert True
+    assert res>0
 
 
 
