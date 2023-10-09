@@ -115,3 +115,13 @@ def test_csv_create_writer():
     assert type(writer) == CsvWriter
 
 
+def test_csv_cleanup():
+    # Cleanup.  Should be the last test in our series
+    # asserts always True
+    #
+    if os.path.exists(readFile):
+        os.remove(readFile)
+
+    if os.path.exists(writeFile):
+        os.remove(writeFile)
+    
