@@ -42,7 +42,15 @@ class Csv(Controller):
     # ----------------------------------------------------------------------
     # import: import is a keyword that cannot be used as a method name  
     #
-    @ex(help='import transactions from an ATB csv file',aliases=['import']) 
+    @ex(
+            help='import transactions from an ATB csv file',
+            aliases=['import'],
+            arguments=[(
+                ['csv_file'],{
+                    'help': 'csv file to import',
+                    'action': 'store',
+                }
+            )]) 
     def imp(self):
         '''
         imp | import <csv_file>    import and check csv_file into the import table of the
@@ -50,7 +58,47 @@ class Csv(Controller):
                                     import table will be zapped.
 
         '''
-        pass
+        # Open the database
+        self.app.sqlite3.set_dbfile(self.app.config.get('atbimp','db_file'))
+        self.app.sqlite3.connect()
+        csv_file = self.app.pargs.csv_file
+
+
+        # See if file exists and we can open this
+        self.app.log.info(f"Checking and importing from csv file: {csv_file}")
+        self.chkreport["fileChecked"] = csv_file
+        reader = CsvReader()
+
+        # Sniffer doesn't work on Atb Files, since it needs quoted values
+        # to determine the delimiter
+        #
+        if not reader.open(csv_file, snif=False):
+            self.app.log.error(f'Error reading from csv file: {csv_file}')
+            return None
+            
+        row = reader.readline(); self.chkreport["linesRead"]+=1
+        
+        # No sniffer so we have to figure out if this is a header line
+        # 
+        if row[0] == 'Transaction Date':
+            self.app.log.warning(f'  - Skipping header line: (1){row[0]}....')
+            # Get another one
+            row = reader.readline(); self.chkreport["linesRead"]+=1
+
+        # Go trough the motions
+        while not row is None:
+            self._check_row(row) ; self.chkreport["dataLinesFound"]+=1
+            row = reader.readline(); self.chkreport["linesRead"]+=1
+
+        # Last line doesn't count
+        self.chkreport["linesRead"]-=1
+
+        # Looks like we're all done.  Let's print the results.
+        #
+        data = {}
+        data["report"] = self.chkreport
+        self.app.render(data, 'csv/report.jinja2')
+        self.app.sqlite3.close()
 
     # ----------------------------------------------------------------------
     # _check_row:  Check the current row for known ATB csv errors
@@ -115,9 +163,8 @@ class Csv(Controller):
         chk | check <csv_file>     check the csv file for know ATB csv issues.  
         '''
         csv_file = self.app.pargs.csv_file
-        db_tbl_cols = self.app.config.get('atbimp', 'db_tbl_cols')
 
-        self.app.log.info("Checking csv file: %s" % csv_file)
+        self.app.log.info(f"Checking csv file: {csv_file}")
         self.chkreport["fileChecked"] = csv_file
 
         # See if file exists and we can open this
@@ -175,7 +222,7 @@ class Csv(Controller):
         csv_file = self.app.pargs.csv_file
         exp_file = self.app.pargs.exp_file
 
-        db_tbl_cols = self.app.config.get('atbimp', 'db_tbl_cols')
+        exp_tbl_cols = self.app.config.get('atbimp', 'exp_tbl_cols')
 
         self.app.log.info(f"Checking csv file: {csv_file}")
         self.chkreport["fileChecked"] = csv_file

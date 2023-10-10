@@ -17,14 +17,16 @@ CONFIG = init_defaults('atbimp')
 CONFIG['atbimp']['db_file'] = './transactions.db3'
 
 
-# db_tbl_cols:
+# exp_tbl_cols:
+#
 # This is (our version) of the rows in an ATB export file.  We changed
 # the names slightly, getting rid of spaces and capitals to be more 
 # database like.
 #
-# This list of field columns will only be used by the export function.
+# This list of field columns will only be used by the export function
+# if no header line is found.
 #
-CONFIG['atbimp']['db_tbl_cols'] = [
+CONFIG['atbimp']['exp_tbl_cols'] = [
     'date', 
     'account_rtn', 
     'account_number', 
@@ -35,6 +37,34 @@ CONFIG['atbimp']['db_tbl_cols'] = [
     'running_balance_amount', 
     'extended_text', 
     'bank_reference_number' 
+]
+
+# db_accounts_tbl:
+#
+# In our version of the database there will be a list of acounts in the 'accounts' table.
+# This table will hold a list of all back accounts found.  The transactions will be placed
+# in seperate tables, one per account.
+#
+CONFIG['atbimp']['db_accounts_tbl_cols'] = [
+    "'id' INETEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
+    "'alias' TEXT",                     # Last 4 digits of our account number
+    "'acct_routing' TEXT",              # bank routing info
+    "'acct_number' TEXT"                # your account number
+]
+
+# db_account_tbl_cols:
+#
+# Table structure of each account table.  Tables will be named the alias of the account.
+#
+CONFIG['atbimp']['db_account_tbl_cols'] = [
+    "'date' TEXT",
+    "'transaction_type' TEXT",
+    "'customer_ref_number' TEXT",
+    "'amount' REAL",
+    "'dc' TEXT",                # is the amount Debit or Credit (D/C)
+    "'balance' TEXT",           # running balance
+    "'description' TEXT",
+    "'bank_reference' TEXT"
 ]
 
 class AtbImpApp(App):

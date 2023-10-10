@@ -106,10 +106,6 @@ venv.bak/
 
 # data
 data/
-*.db
-*.db3
-
-# test data
-tests/*.txt
-tests/*.db
-tests/*.db3
+**.db
+**.db3
+**.csv
