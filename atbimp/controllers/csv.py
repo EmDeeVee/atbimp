@@ -37,68 +37,8 @@ class Csv(Controller):
 
     
     ## ====================================================================
-    ## Controller Code
-
-    # ----------------------------------------------------------------------
-    # import: import is a keyword that cannot be used as a method name  
-    #
-    @ex(
-            help='import transactions from an ATB csv file',
-            aliases=['import'],
-            arguments=[(
-                ['csv_file'],{
-                    'help': 'csv file to import',
-                    'action': 'store',
-                }
-            )]) 
-    def imp(self):
-        '''
-        imp | import <csv_file>    import and check csv_file into the import table of the
-                                    transactions.db3 database.  The current contents of the 
-                                    import table will be zapped.
-
-        '''
-        # Open the database
-        self.app.sqlite3.set_dbfile(self.app.config.get('atbimp','db_file'))
-        self.app.sqlite3.connect()
-        csv_file = self.app.pargs.csv_file
-
-
-        # See if file exists and we can open this
-        self.app.log.info(f"Checking and importing from csv file: {csv_file}")
-        self.chkreport["fileChecked"] = csv_file
-        reader = CsvReader()
-
-        # Sniffer doesn't work on Atb Files, since it needs quoted values
-        # to determine the delimiter
-        #
-        if not reader.open(csv_file, snif=False):
-            self.app.log.error(f'Error reading from csv file: {csv_file}')
-            return None
-            
-        row = reader.readline(); self.chkreport["linesRead"]+=1
-        
-        # No sniffer so we have to figure out if this is a header line
-        # 
-        if row[0] == 'Transaction Date':
-            self.app.log.warning(f'  - Skipping header line: (1){row[0]}....')
-            # Get another one
-            row = reader.readline(); self.chkreport["linesRead"]+=1
-
-        # Go trough the motions
-        while not row is None:
-            self._check_row(row) ; self.chkreport["dataLinesFound"]+=1
-            row = reader.readline(); self.chkreport["linesRead"]+=1
-
-        # Last line doesn't count
-        self.chkreport["linesRead"]-=1
-
-        # Looks like we're all done.  Let's print the results.
-        #
-        data = {}
-        data["report"] = self.chkreport
-        self.app.render(data, 'csv/report.jinja2')
-        self.app.sqlite3.close()
+    ## Helper Functions
+    ##
 
     # ----------------------------------------------------------------------
     # _check_row:  Check the current row for known ATB csv errors
@@ -145,6 +85,96 @@ class Csv(Controller):
             row.pop()
 
 
+    # ----------------------------------------------------------------------
+    # _isHeaderRow():  Check the current row for known ATB header
+    #
+    @ex(hide=True)
+    def _isHeaderRow(self, row):
+        '''
+        _isHeaderRow(row)   Check to see of the row is a known ATB header.
+                            ATB files don't use quoted strings therefore the 
+                            csv.Sniffer() class cannot determine the header row.
+        '''
+        # No sniffer so we have to figure out if this is a header line
+        # 
+        # (Not a whole lot of checking here, for now)
+        return row[0] == 'Transaction Date'
+
+    # ----------------------------------------------------------------------
+    # _createReader():  Check the current row for known ATB header
+    #
+    @ex(hide=True)
+    def _createReader(self, csv_file):
+        '''
+        _createReader(csv_file)   Create a reader object and report this to user
+        '''
+        # See if file exists and we can open this
+        self.app.log.info(f"Checking and importing from csv file: {csv_file}")
+        self.chkreport["fileChecked"] = csv_file
+        reader = CsvReader()
+
+        # Sniffer doesn't work on Atb Files, since it needs quoted values
+        # to determine the delimiter
+        #
+        if not reader.open(csv_file, snif=False):
+            self.app.log.error(f'Error reading from csv file: {csv_file}')
+            return None
+
+        return reader
+
+
+    ## ====================================================================
+    ## Controller Code
+    ##
+
+    # ----------------------------------------------------------------------
+    # import: import is a keyword that cannot be used as a method name  
+    #
+    @ex(
+            help='import transactions from an ATB csv file',
+            aliases=['import'],
+            arguments=[(
+                ['csv_file'],{
+                    'help': 'csv file to import',
+                    'action': 'store',
+                }
+            )]) 
+    def imp(self):
+        '''
+        imp | import <csv_file>    import and check csv_file into the import table of the
+                                    transactions.db3 database.  The current contents of the 
+                                    import table will be zapped.
+
+        '''
+        # Open the database
+        self.app.sqlite3.set_dbfile(self.app.config.get('atbimp','db_file'))
+        self.app.sqlite3.connect()
+
+        # Create the reader object
+        csv_file = self.app.pargs.csv_file
+        reader = self._createReader(csv_file)
+            
+        # Read the first line
+        row = reader.readline(); self.chkreport["linesRead"]+=1
+        if self._isHeaderRow(row): 
+            self.app.log.warning(f'  - Skipping header line: (1){row[0]}....')
+            # Get another one
+            row = reader.readline(); self.chkreport["linesRead"]+=1
+
+        # Go trough the motions
+        while not row is None:
+            self._check_row(row) ; self.chkreport["dataLinesFound"]+=1
+            row = reader.readline(); self.chkreport["linesRead"]+=1
+
+        # Last line doesn't count
+        self.chkreport["linesRead"]-=1
+
+        # Looks like we're all done.  Let's print the results.
+        #
+        data = {}
+        data["report"] = self.chkreport
+        self.app.render(data, 'csv/report.jinja2')
+        self.app.sqlite3.close()
 
     # ----------------------------------------------------------------------
     # chk: The check function as called from the command line
@@ -162,26 +192,13 @@ class Csv(Controller):
         '''
         chk | check <csv_file>     check the csv file for know ATB csv issues.  
         '''
+        # Create the reader object
         csv_file = self.app.pargs.csv_file
-
-        self.app.log.info(f"Checking csv file: {csv_file}")
-        self.chkreport["fileChecked"] = csv_file
-
-        # See if file exists and we can open this
-        reader = CsvReader()
-
-        # Sniffer doesn't work on Atb Files, since it needs quoted values
-        # to determine the delimiter
-        #
-        if not reader.open(csv_file, snif=False):
-            self.app.log.error(f'Error reading from csv file: {csv_file}')
-            return None
+        reader = self._createReader(csv_file)
             
+        # Read the first line
         row = reader.readline(); self.chkreport["linesRead"]+=1
-        
-        # No sniffer so we have to figure out if this is a header line
-        # 
-        if row[0] == 'Transaction Date':
+        if self._isHeaderRow(row): 
             self.app.log.warning(f'  - Skipping header line: (1){row[0]}....')
             # Get another one
             row = reader.readline(); self.chkreport["linesRead"]+=1
@@ -221,35 +238,29 @@ class Csv(Controller):
         '''
         csv_file = self.app.pargs.csv_file
         exp_file = self.app.pargs.exp_file
-
-        exp_tbl_cols = self.app.config.get('atbimp', 'exp_tbl_cols')
+        # TODO: Not used.  Build an option to add default header 
+        #       line when none exists.
+        # exp_tbl_cols = self.app.config.get('atbimp', 'exp_tbl_cols')
 
         self.app.log.info(f"Checking csv file: {csv_file}")
         self.chkreport["fileChecked"] = csv_file
 
-        # See if file exists and we can open this
-        reader = CsvReader()
+        # Create the reader object
+        csv_file = self.app.pargs.csv_file
+        reader = self._createReader(csv_file)
 
-        # Sniffer doesn't work on Atb Files, since it needs quoted values
-        # to determine the delimiter
+        # Create the writer.  No helper function yet since this code
+        # is called only in export.
         #
-        if not reader.open(csv_file, snif=False):
-            self.app.log.error(f'Error reading from csv file: {csv_file}')
-            return None
-        
         writer = CsvWriter()
         if not writer.open(exp_file):
             self.app.log.error(f'Error opening export file: {exp_file}')
             return None
 
-
+        # Read the first line
         row = reader.readline(); self.chkreport["linesRead"]+=1
-
-        # No sniffer so we have to figure out if this is a header line
-        # 
-        if row[0] == 'Transaction Date':
+        if self._isHeaderRow(row): 
             self.app.log.warning(f'  - Skipping header line: (1){row[0]}....')
-            writer.writeline(row)       # But we do want to write the header
             # Get another one
             row = reader.readline(); self.chkreport["linesRead"]+=1
 
