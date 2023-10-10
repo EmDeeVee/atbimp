@@ -9,9 +9,21 @@ from .controllers.base import Base
 from .controllers.csv import Csv
 
 # configuration defaults
+#
+# TODO: figure out how this works with a cement yaml config file
+#
 CONFIG = init_defaults('atbimp')
 # CONFIG['atbimp']['db_file'] = '~/.atbimp/transactions.db3'
 CONFIG['atbimp']['db_file'] = './transactions.db3'
+
+
+# db_tbl_cols:
+# This is (our version) of the rows in an ATB export file.  We changed
+# the names slightly, getting rid of spaces and capitals to be more 
+# database like.
+#
+# This list of field columns will only be used by the export function.
+#
 CONFIG['atbimp']['db_tbl_cols'] = [
     'date', 
     'account_rtn', 
@@ -24,38 +36,6 @@ CONFIG['atbimp']['db_tbl_cols'] = [
     'extended_text', 
     'bank_reference_number' 
 ]
-CONFIG['atbimp']['create_table_import'] = """
-CREATE TABLE import (
-    "date" DATE, 
-    "account_rtn" TEXT, 
-    "account_number" TEXT, 
-    "transaction_type" TEXT, 
-    "customer_ref_number" TEXT, 
-    "debit_amount" DECIMAL (10, 2), 
-    "credit_amount" DECIMAL (10, 2), 
-    "running_balance_amount" DECIMAL (10, 2), 
-    "extended_text" TEXT, 
-    "bank_reference_number" TEXT
-)
-"""
-CONFIG['atbimp']['create_table_transactions'] = """
-CREATE TABLE transactions (
-    "transaction_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-    "date" DATE, 
-    "account_rtn" TEXT, 
-    "account_number" TEXT, 
-    "transaction_type" TEXT, 
-    "customer_ref_number" TEXT, 
-    "debit_amount" DECIMAL (10, 2), 
-    "credit_amount" DECIMAL (10, 2), 
-    "running_balance_amount" DECIMAL (10, 2), 
-    "extended_text" TEXT, 
-    "bank_reference_number" TEXT
-)
-"""
-CONFIG['atbimp']['create_idx_transactions'] = """
-CREATE INDEX idx_transaction_id ON transactions ("transaction_id")
-"""
 
 class AtbImpApp(App):
     """ATB CSV Import and List Application primary application."""

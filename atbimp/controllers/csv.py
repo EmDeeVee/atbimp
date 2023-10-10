@@ -36,9 +36,10 @@ class Csv(Controller):
     }
 
     
-    ## ===============================================
-    ## Controll er Code
+    ## ====================================================================
+    ## Controller Code
 
+    # ----------------------------------------------------------------------
     # import: import is a keyword that cannot be used as a method name  
     #
     @ex(help='import transactions from an ATB csv file',aliases=['import']) 
@@ -51,6 +52,7 @@ class Csv(Controller):
         '''
         pass
 
+    # ----------------------------------------------------------------------
     # _check_row:  Check the current row for known ATB csv errors
     #
     @ex(hide=True)
@@ -96,6 +98,7 @@ class Csv(Controller):
 
 
 
+    # ----------------------------------------------------------------------
     # chk: The check function as called from the command line
     #
     @ex(
@@ -149,6 +152,7 @@ class Csv(Controller):
         data["report"] = self.chkreport
         self.app.render(data, 'csv/report.jinja2')
 
+    # ----------------------------------------------------------------------
     # exp: export
     #
     @ex(
@@ -218,13 +222,3 @@ class Csv(Controller):
         data["report"] = self.chkreport
         self.app.render(data, 'csv/report.jinja2')
 
-
-    # mrg: merge
-    # 
-    @ex(help='merge last imported file into transactions table', aliases=['merge'])
-    def mrg(self):
-        '''
-        mrg | merge                merge the previously imported csv_file into table
-                                    'import' with the transactions table.
-        '''
-        pass
