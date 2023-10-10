@@ -23,7 +23,7 @@ class CsvReader():
         self.hasHeader = False               # Does oru file have a header
     
     # Open the csv file
-    def open(self,csvfile):
+    def open(self,csvfile, snif=True):
         if not os.path.exists(csvfile):
             return False
         
@@ -33,9 +33,9 @@ class CsvReader():
             # First we do a bit of sniffing
             sniffer = csv.Sniffer()
             sample = self.fd_reader.read(1024)
-            self.fd_reader.seek(0);     # Reset file pointer
-            if len(sample) > 10:        # Can't do anything with less bytes
-                dialect = sniffer.sniff(sample)
+            self.fd_reader.seek(0);              # Reset file pointer
+            if len(sample) > 10 and snif:        # Can't do anything with less bytes
+                dialect = sniffer.sniff(sample, delimiters=',')
                 self.hasHeader = sniffer.has_header(sample)
                 self.reader = csv.reader(self.fd_reader, dialect)
             else:
@@ -72,12 +72,12 @@ class CsvWriter():
     
     # Open the csv file
     def open(self,csvfile):
-        if not os.path.exists(csvfile):
-            return False
+        # if not os.path.exists(csvfile):
+        #     return False
         
         try:
             self.fd_writer = open(csvfile, "w")
-            self.writer = csv.writer(self.fd_writer)   
+            self.writer = csv.writer(self.fd_writer,dialect='excel', quoting=csv.QUOTE_NONNUMERIC)   
         except:
             return False
         
@@ -103,5 +103,5 @@ class CsvWriter():
         
     # Pick up your mess before you leave.
     def __del__(self):
-        if not self.fh_writer is None:
-            self.fh_writer.close()
+        if not self.fd_writer is None:
+            self.fd_writer.close()

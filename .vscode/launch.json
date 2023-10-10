@@ -11,16 +11,43 @@
             "program": "env/bin/atbimp",
             "args": "-d",
             "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "atbimp csv check {no header}",
+            "type": "python",
+            "request": "launch",
+            "program": "env/bin/atbimp",
+            "args": "-d csv check data/2270-22.csv",
+            "console": "integratedTerminal",
             "justMyCode": false
         },
         {
-            "name": "atbimp csv check",
+            "name": "atbimp csv check {header}",
             "type": "python",
             "request": "launch",
             "program": "env/bin/atbimp",
             "args": "-d csv check data/1979-22.csv",
             "console": "integratedTerminal",
-            "justMyCode": true
+            "justMyCode": false
+        },
+        {
+            "name": "atbimp csv exp {no header}",
+            "type": "python",
+            "request": "launch",
+            "program": "env/bin/atbimp",
+            "args": "-d csv exp data/2270-22.csv data/2270-22-exp.csv",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "atbimp csv exp {header}",
+            "type": "python",
+            "request": "launch",
+            "program": "env/bin/atbimp",
+            "args": "-d csv exp data/1979-22.csv data/1979-22-exp.csv",
+            "console": "integratedTerminal",
+            "justMyCode": false
         },
     ]
 }

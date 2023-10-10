@@ -119,14 +119,20 @@ class Csv(Controller):
 
         # See if file exists and we can open this
         reader = CsvReader()
-        if not reader.open(csv_file):
-            self.app.log.error('Error reading from csv file: %s' % csv_file)
+
+        # Sniffer doesn't work on Atb Files, since it needs quoted values
+        # to determine the delimiter
+        #
+        if not reader.open(csv_file, snif=False):
+            self.app.log.error(f'Error reading from csv file: {csv_file}')
             return None
             
-
         row = reader.readline(); self.chkreport["linesRead"]+=1
-        if reader.isHeaderLine(row):
-            self.app.log.warning('  - Skipping header line: (1)%s....' % row[0])
+        
+        # No sniffer so we have to figure out if this is a header line
+        # 
+        if row[0] == 'Transaction Date':
+            self.app.log.warning(f'  - Skipping header line: (1){row[0]}....')
             # Get another one
             row = reader.readline(); self.chkreport["linesRead"]+=1
 
@@ -146,8 +152,7 @@ class Csv(Controller):
     # exp: export
     #
     @ex(
-            help='dump the checked and corrected lines back into an export file',
-            aliases=['export'],
+            help='read, check, fix and write back to a proper csv file',
             arguments=[
                 (['csv_file'],{
                     'help': 'file to read data from',
@@ -159,38 +164,49 @@ class Csv(Controller):
                 })
             ]
         )
-    def exp(self):
+    def fix(self):
         '''
-        exp | export <csv_file> <exp_file>     check the csv file for know ATB csv issues.  
+        fix  <csv_file> <exp_file>     check the csv file for know ATB csv issues.  
         '''
         csv_file = self.app.pargs.csv_file
         exp_file = self.app.pargs.exp_file
 
         db_tbl_cols = self.app.config.get('atbimp', 'db_tbl_cols')
 
-        self.app.log.info("Checking csv file: %s" % csv_file)
+        self.app.log.info(f"Checking csv file: {csv_file}")
         self.chkreport["fileChecked"] = csv_file
 
         # See if file exists and we can open this
         reader = CsvReader()
-        if not reader.open(csv_file):
+
+        # Sniffer doesn't work on Atb Files, since it needs quoted values
+        # to determine the delimiter
+        #
+        if not reader.open(csv_file, snif=False):
             self.app.log.error(f'Error reading from csv file: {csv_file}')
             return None
         
         writer = CsvWriter()
         if not writer.open(exp_file):
             self.app.log.error(f'Error opening export file: {exp_file}')
+            return None
 
-            
 
         row = reader.readline(); self.chkreport["linesRead"]+=1
-        if reader.isHeaderLine(row):
-            self.app.log.warning('  - Skipping header line: (1)%s....' % row[0])
+
+        # No sniffer so we have to figure out if this is a header line
+        # 
+        if row[0] == 'Transaction Date':
+            self.app.log.warning(f'  - Skipping header line: (1){row[0]}....')
+            writer.writeline(row)       # But we do want to write the header
             # Get another one
             row = reader.readline(); self.chkreport["linesRead"]+=1
 
         while not row is None:
             self._check_row(row) ; self.chkreport["dataLinesFound"]+=1
+            writer.writeline(row); self.chkreport["recordsExported"]+=1
+
+            # and get the net one
             row = reader.readline(); self.chkreport["linesRead"]+=1
 
         # Last line doesn't count
