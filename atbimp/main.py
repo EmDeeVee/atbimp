@@ -1,6 +1,5 @@
 
 import os
-from sqlalchemy import create_engine, text
 from cement import App, TestApp, init_defaults
 from cement.core.exc import CaughtSignal
 from cement.utils import fs
@@ -108,6 +107,11 @@ class AtbImpApp(App):
         # hooks
         hooks = []
 
+    # Error codes.  We don't know what exit codes cement uses
+    # so lets start ours at 128
+    EC_FILE_NOT_FOUND = 128
+
+
 
 class AtbImpAppTest(TestApp,AtbImpApp):
     """A sub-class of AtbImpApp that is better suited for testing."""
@@ -131,7 +135,7 @@ def main():
 
         except AtbImpAppError as e:
             print('AtbImpAppError > %s' % e.args[0])
-            app.exit_code = 1
+            app.exit_code = 2
 
             if app.debug is True:
                 import traceback

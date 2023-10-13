@@ -122,6 +122,19 @@ def test_ext_sqlite_create_table():
         assert model['name'] == 'test'
         sqlite_cleanup(app)
 
+def test_ext_sqlite_show_tables_no_tables():
+    # test show tables retorn on empty databse
+
+    # Connect to the database but don't create any tables
+    with AtbImpAppTest() as app:
+        app.run()
+        sqlite_connect(app)
+
+        # This should not return any tables
+        ret = app.sqlite3.show_tables()
+        assert len(ret) == 0
+        sqlite_cleanup(app)
+
 def test_ext_sqlite_show_tables_no_filter():
     # Test the show_tables() function with no filter
 

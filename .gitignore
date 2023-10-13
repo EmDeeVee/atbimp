@@ -109,3 +109,8 @@ data/
 **.db
 **.db3
 **.csv
+
+
+# vi and MacOs
+**.*~
+**.DS_Store

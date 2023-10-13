@@ -1,0 +1,6 @@
+Transaction Date,Account Rtn,Account Number,Transaction Type,Customer Reference Number,Debit Amount,Credit Amount,Principal Balance Amount,Extended Text,Bank Reference Number
+12/05/2022,21907339,0000000123456789,Payment,,228.86,,107.44,Loan Payment to TPPL UNSECURED AND CASH SECURED,
+11/05/2022,21907339,0000000123456789,Payment,,228.86,,336.30,Loan Payment to TPPL UNSECURED AND CASH SECURED,
+11/04/2022,21907339,0000000123456789,Payment,,500.00,,565.16,Bill Payment ATB Mastercard to CAD Mastercard,
+10/05/2022,21907339,0000000123456789,Payment,,228.86,,1065.16,Loan Payment to TPPL UNSECURED AND CASH SECURED,
+09/26/2022,21907339,0000000123456789,Payment,,,1260.00,1294.02,e-Transfer Received,
