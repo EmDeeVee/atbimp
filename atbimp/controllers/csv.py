@@ -128,6 +128,19 @@ class Csv(Controller):
 
         return reader
 
+    # ----------------------------------------------------------------------
+    # _import_transaction():  Import transaction into database
+    #
+    @ex(hide=True)
+    def _import_transaction(self, row):
+        # modelAccounts = self.sqlite3.show_tables('accounts')
+        # if len(modelAccounts) == 0:
+        #     # no accounts table, make one
+        #     modelAccounts  = self.sqlite3.create_table(self.app.config.get('atbimp', 'db_accounts_tbl_cols'))
+
+        return True
+            
+
 
     ## ====================================================================
     ## Controller Code
@@ -157,7 +170,11 @@ class Csv(Controller):
         self.app.sqlite3.connect()
         modelAccounts = self.app.sqlite3.show_tables('accounts')
         if len(modelAccounts) == 0:
-            self.app.sqlite3.create_table(self.app.config.get('atbimp','db_accounts_tbl'))
+            modelAccountsDefinition = {
+                'name': 'accounts',
+                'fields': self.app.config.get('atbimp','db_account_tbl_cols')
+            }
+            self.app.sqlite3.create_table(modelAccountsDefinition)
             # Try again
             modelAccounts = self.app.sqlite3.show_tables('accounts')
             if len(modelAccounts) == 0:
@@ -179,6 +196,8 @@ class Csv(Controller):
         while not row is None:
             self._check_row(row) ; self.chkreport["dataLinesFound"]+=1
             row = reader.readline(); self.chkreport["linesRead"]+=1
+
+            self._import_transaction(row)
 
         # Last line doesn't count
         self.chkreport["linesRead"]-=1

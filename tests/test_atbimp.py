@@ -23,16 +23,14 @@ def get_chkreport(app):
 def TestAppNoArg():
     with AtbImpAppTest() as app:        
         app.run()
-
-    yield app
+        yield app
 
 @pytest.fixture
 def TestAppArgs(request):
     argv = request.node.get_closest_marker('argv').args[0]
     with AtbImpAppTest(argv=argv) as app:        
         app.run()
-
-    yield app
+        yield app
 
 
 def test_atbimp(TestAppNoArg):
@@ -199,3 +197,11 @@ def test_atbimp_csv_imp_no_args():
         with pytest.raises(SystemExit) as e_info:
             app.run()
             assert e_info.code == 2
+
+@pytest.mark.argv(['csv', 'imp', './tests/mixed_errors.tcsv'])
+def test_atbimp_csv_imp_mixed(TestAppArgs):
+    # Try importing our test file mixed.tcsv
+    # FIXME: Need another test database file
+    report = get_chkreport(TestAppArgs)
+    assert TestAppArgs.exit_code == 0 
+
