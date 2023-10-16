@@ -26,16 +26,16 @@ CONFIG['atbimp']['db_file'] = './transactions.db3'
 # if no header line is found.
 #
 CONFIG['atbimp']['exp_tbl_cols'] = [
-    'date', 
-    'account_rtn', 
-    'account_number', 
-    'transaction_type', 
-    'customer_ref_number', 
-    'debit_amount', 
-    'credit_amount', 
-    'running_balance_amount', 
-    'extended_text', 
-    'bank_reference_number' 
+    'date',                     #0
+    'account_rtn',              #1
+    'account_number',           #2
+    'transaction_type',         #3
+    'customer_ref_number',      #4
+    'debit_amount',             #5
+    'credit_amount',            #6
+    'running_balance_amount',   #7
+    'extended_text',            #8
+    'bank_reference_number'     #9
 ]
 
 # db_accounts_tbl:
@@ -45,7 +45,7 @@ CONFIG['atbimp']['exp_tbl_cols'] = [
 # in seperate tables, one per account.
 #
 CONFIG['atbimp']['db_accounts_tbl_cols'] = [
-    "'id' INETEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
+    "'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
     "'alias' TEXT",                     # Last 4 digits of our account number
     "'acct_routing' TEXT",              # bank routing info
     "'acct_number' TEXT"                # your account number
@@ -56,6 +56,7 @@ CONFIG['atbimp']['db_accounts_tbl_cols'] = [
 # Table structure of each account table.  Tables will be named the alias of the account.
 #
 CONFIG['atbimp']['db_account_tbl_cols'] = [
+    "'accounts_id' INTEGER",
     "'date' TEXT",
     "'transaction_type' TEXT",
     "'customer_ref_number' TEXT",

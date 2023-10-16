@@ -52,17 +52,25 @@ def sqlite_create_test_model(ord=0):
     }
     return model
 
-def sqlite_create_insert_dict(model, cnt=1):
+def sqlite_create_insert_dict(model, dataOption=False):
     ''' Helper fuction to create dict for insert statment '''
     ins = {
         'into': model,
-        'cols': ('date', 'txt', 'price'),
     }
-    if cnt == 1:
-        fruits=('banana', 'apple', 'pear', 'raspbery', 'fig', 'pineapple')
-        fruitIdx = random.randint(0,5)
-    
-    ins['values'] = ('#CURRENT_DATE', fruits[fruitIdx], int(random.random()*10000)/100)
+    fruits=('banana', 'apple', 'pear', 'raspbery', 'fig', 'pineapple')
+    fruitIdx = random.randint(0,5)
+
+    if dataOption:
+        # use the data option
+        ins['data'] = {
+            'date': '#CURRENT_DATE',
+            'txt':   fruits[fruitIdx],
+            'price': int(random.random()*10000)/100
+        }
+    else:
+        # Use cols/values pair
+        ins['cols'] = ('date', 'txt', 'price')
+        ins['values'] = ('#CURRENT_DATE', fruits[fruitIdx], int(random.random()*10000)/100)
 
     return ins
 
@@ -206,6 +214,13 @@ def test_ext_sqlite_insert_as_dict(TestApp):
     # Test insert statment as a dict with single value
     TestApp.sqlite3.create_table(sqlite_create_test_model())
     rowsAffected = TestApp.sqlite3.insert(sqlite_create_insert_dict('test'))
+    assert rowsAffected == 1
+
+@pytest.mark.argv(['--debug'])
+def test_ext_sqlite_insert_as_dict_with_data(TestApp):
+    # Test insert statment as a dict with single value
+    TestApp.sqlite3.create_table(sqlite_create_test_model())
+    rowsAffected = TestApp.sqlite3.insert(sqlite_create_insert_dict('test', True))
     assert rowsAffected == 1
 
 @pytest.mark.argv(['--debug'])

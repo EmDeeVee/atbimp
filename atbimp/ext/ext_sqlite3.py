@@ -61,7 +61,9 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
     # ========================================================================
 
     def _mkdict(self, labels, values):
-        # Create a dict from two tubles
+        # Create a dict from two tuples
+        # FIXME:  Discard and use dict(zip(...))
+        #
         if len(labels) > 0 and len(values) > 0 and len(labels) == len(values):
             ret = {}
             for i,value in enumerate(values):
@@ -136,7 +138,7 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         ret = ""
         for value in values:
             if type(value) == str:
-                if value[0] == '#':
+                if len(value) and value[0] == '#':
                     ret += f"{value[1:]}"       # Will only insert the contents of value
                 else:
                     ret += f"'{value}'"         # make this an sqlite string literal 
@@ -148,6 +150,8 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
             ret += ', '                    
     
         # We couldn't use join() so remove the last 'comma space'
+        # FIXME: Yes we can.  Just build a list first and then do join()
+        #
         return ret[:-2]
 
 
@@ -376,6 +380,18 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
                                         values can either be a tuple ('banana', 3.0) or a 
                                         list of tuples: [('banana', 3.0),('Apple', 3000.00)]
 
+                                        or dict in the form:
+                                        {
+                                            'into':     <table>,
+                                            'data':     <dict with key:value>
+                                        }
+
+                                        eg: 
+                                            insert({'into': 'tbl', data{
+                                                'fruit': 'banana',
+                                                'price': 3.0
+                                            }})
+
                                         When you want to use an Sqlite keyword as a value, you have
                                         to prefix it with a has (#), so python will validate it a a
                                         string but in the acutual build of the statement the enclosing
@@ -398,26 +414,59 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         '''
         if type(insert) == str:
             stmt = f"INSERT {insert};"
+
         elif type(insert) == dict:
             stmt = f"INSERT INTO {insert['into']}"
-            if 'cols' in insert and len(insert['cols']):
-                stmt += f"{insert['cols']}"
-            if 'values' in insert:
-                if type(insert['values']) == tuple:
-                    stmt += f" VALUES ({self._values2str(insert['values'])})"
-                elif type(insert['values']) == list:
-                    # Handle list of tuples
-                    stmt += f" VALUES"
-                    for row in insert['values']:
-                        if type(row) == tuple:
-                            stmt += f"({self._values2str(row)}),"
+            if 'data' in insert and len(insert['data']):
+                # data takes precedence over the cols value pair
+                columns = []
+                values = []
+                for col,val in insert['data'].items():
+                    columns.append(col)
+                    values.append(val)
+
+                colstr = ", ".join(columns)
+                stmt += f"({colstr})"
+
+                # values we have to itterate since some need to be 
+                # quoted, and some don't
+                valstr = ""
+                for val in values:
+                    if type(val) == str:
+                        if len(val) and val[0] == '#':
+                            valstr += val[1:]  # skip the hash
                         else:
-                            raise ValueError
-                        
-                    # Remove trailing comma
-                    stmt = stmt[:-1]
-                else:
-                    raise ValueError
+                            valstr += f"'{val}'"    # Quote it
+                    elif type(val) == int or type(val) == float:
+                        valstr += f"{val}"
+                    
+                    valstr += ","
+                
+                stmt += f" VALUES({valstr[:-1]})"
+
+            else:
+                # no data, so cols value pair
+                if 'cols' in insert and len(insert['cols']):
+                    stmt += f"{insert['cols']}"
+
+                if 'values' in insert:
+                    if type(insert['values']) == tuple:
+                        stmt += f" VALUES ({self._values2str(insert['values'])})"
+
+                    elif type(insert['values']) == list:
+                        # Handle list of tuples
+                        stmt += f" VALUES"
+                        for row in insert['values']:
+                            if type(row) == tuple:
+                                stmt += f"({self._values2str(row)}),"
+                            else:
+                                raise ValueError
+                            
+                        # Remove trailing comma
+                        stmt = stmt[:-1]
+
+                    else:
+                        raise ValueError
         else:
             raise ValueError
 

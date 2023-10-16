@@ -201,7 +201,7 @@ def test_atbimp_csv_imp_no_args():
 @pytest.mark.argv(['csv', 'imp', './tests/mixed_errors.tcsv'])
 def test_atbimp_csv_imp_mixed(TestAppArgs):
     # Try importing our test file mixed.tcsv
-    # FIXME: Need another test database file
+    # TODO: Need another test database file
     report = get_chkreport(TestAppArgs)
     assert TestAppArgs.exit_code == 0 
 

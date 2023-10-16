@@ -1,4 +1,5 @@
 import os
+import re
 from cement import Controller, ex
 from .components.csv import CsvReader, CsvWriter
 
@@ -36,6 +37,16 @@ class Csv(Controller):
             "totalErrors":       0,       # Total number of errors found
             "recordsImported":   0,       # Total number of records imported.
             "recordsExported":   0,       # Total number of records imported.
+        }
+
+    def _post_argument_parsing(self):
+        self.modelAcctTemplate = {
+            'name': 'accounts',
+            'fields': self.app.config.get('atbimp','db_accounts_tbl_cols')
+        }
+
+        self.modelTransTemplate = {
+            'fields': self.app.config.get('atbimp','db_account_tbl_cols')
         }
 
     
@@ -133,11 +144,82 @@ class Csv(Controller):
     #
     @ex(hide=True)
     def _import_transaction(self, row):
-        # modelAccounts = self.sqlite3.show_tables('accounts')
-        # if len(modelAccounts) == 0:
-        #     # no accounts table, make one
-        #     modelAccounts  = self.sqlite3.create_table(self.app.config.get('atbimp', 'db_accounts_tbl_cols'))
+        # Make a dict of our row
+        dataIn = dict(zip(self.app.config.get('atbimp','exp_tbl_cols'),row))
 
+        # First split data in two sets
+        fieldsAcct = tuple(map(lambda x:re.split("'",x)[1], self.modelAcctTemplate['fields']))
+        dataAcct = dict(zip(
+            fieldsAcct[1:],
+            (
+                dataIn['account_number'][-4:],
+                dataIn['account_rtn'],
+                dataIn['account_number']
+            )
+        ))
+
+            
+        # We don't want Debit and credit in a seperate cols
+        if len(row[5]):
+            # debit
+            amt = row[5]; dc = "D"
+        else:
+            # credit
+            amt = row[6]; dc = "C"
+
+        fieldsTrans = tuple(map(lambda x:re.split("'",x)[1], self.modelTransTemplate['fields']))
+        datTrans = dict(zip(
+            fieldsTrans[1:],
+            (
+                dataIn['date'],
+                dataIn['transaction_type'],
+                dataIn['customer_ref_number'],
+                amt,
+                dc,
+                dataIn['running_balance_amount'],
+                dataIn['extended_text'],
+                dataIn['bank_reference_number']
+            )
+        ))
+
+        # Our data objects are ready
+        # First the accounts table
+        qry={'query': 'id, alias', 'from': 'accounts', 'where': f"alias LIKE '{dataAcct['alias']}'"}
+        ret = self.app.sqlite3.select(qry)[0]
+        if not len(ret):
+            # This account is not in the db yet. 
+            self.app.sqlite3.insert({'into': 'accounts', 'data': dataAcct})
+
+            # Try again
+            ret = self.app.sqlite3.select(qry)[0]
+            if not len(ret): 
+                # give up
+                return False
+
+        # We now have an id for our dataTrans object
+        datTrans['accounts_id'] = ret['id']
+
+        # Let's add the second part of our transaction.
+        # each account will get it's won table.
+        # so let's see what table we need and if it already
+        # exits.
+        modelName = f"acct_{ret['alias']}"
+        model = self.app.sqlite3.show_tables(modelName)
+        if len(model) == 0:
+            # Nope, let's make one
+            # TODO: We want to use model and col and not table and fields. (dinosour!)
+            self.app.sqlite3.create_table({'name': modelName, 'fields': self.modelTransTemplate['fields']})
+
+            # Try again
+            model = self.app.sqlite3.show_tables(modelName)
+            if len(model) == 0:
+                # Give up
+                return False
+            
+        # We should be good to insert
+        self.app.sqlite3.insert({'into': modelName, 'data': datTrans})
+
+        # That's all there is to it.
         return True
             
 
@@ -170,15 +252,13 @@ class Csv(Controller):
         self.app.sqlite3.connect()
         modelAccounts = self.app.sqlite3.show_tables('accounts')
         if len(modelAccounts) == 0:
-            modelAccountsDefinition = {
-                'name': 'accounts',
-                'fields': self.app.config.get('atbimp','db_account_tbl_cols')
-            }
-            self.app.sqlite3.create_table(modelAccountsDefinition)
+            # model is not there.  We have to create one.
+            self.app.sqlite3.create_table(self.modelAcctTemplate)
             # Try again
             modelAccounts = self.app.sqlite3.show_tables('accounts')
             if len(modelAccounts) == 0:
-                # again?
+                # again?  Give up  
+                # FIXME essential db, we should somehow return an error and exit the program
                 return
 
         # Create the reader object
@@ -195,9 +275,10 @@ class Csv(Controller):
         # Go trough the motions
         while not row is None:
             self._check_row(row) ; self.chkreport["dataLinesFound"]+=1
+            self._import_transaction(row)
+
             row = reader.readline(); self.chkreport["linesRead"]+=1
 
-            self._import_transaction(row)
 
         # Last line doesn't count
         self.chkreport["linesRead"]-=1
