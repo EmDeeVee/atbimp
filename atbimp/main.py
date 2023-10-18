@@ -56,6 +56,7 @@ CONFIG['atbimp']['db_accounts_tbl_cols'] = [
 # Table structure of each account table.  Tables will be named the alias of the account.
 #
 CONFIG['atbimp']['db_account_tbl_cols'] = [
+    "'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
     "'accounts_id' INTEGER",
     "'date' TEXT",
     "'transaction_type' TEXT",

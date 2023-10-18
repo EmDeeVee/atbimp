@@ -270,8 +270,8 @@ class Csv(Controller):
             fieldsAcct[1:],
             (
                 dataIn['account_number'][-4:],
-                dataIn['account_rtn'],
-                dataIn['account_number']
+                f"{int(dataIn['account_rtn']):09}",     # Convert to 9 digits with leading 0
+                f"{int(dataIn['account_number']):012}"   # Convert to 12 digits with leading 0
             )
         ))
 
@@ -286,7 +286,7 @@ class Csv(Controller):
 
         fieldsTrans = tuple(map(lambda x:re.split("'",x)[1], self.modelTransTemplate['fields']))
         datTrans = dict(zip(
-            fieldsTrans[1:],
+            fieldsTrans[2:],
             (
                 dataIn['date'],
                 dataIn['transaction_type'],
