@@ -1,4 +1,5 @@
 Transaction Date,Account Rtn,Account Number,Transaction Type,Customer Reference Number,Debit Amount,Credit Amount,Principal Balance Amount,Extended Text,Bank Reference Number
+12/31/2022,21907339,0000000702497500,Withdrawal,,10.75,,3224.22,POS Purchase JOHN'S NO FRILLS # 360 JOHN'S NO FRIL,,
 12/5/2022,21907339,0000000123456789,Payment,'No Good sir,228.86,,107.44,Loan Payment to TPPL UNSECURED AND CASH SECURED,
 11/5/2022,21907339,0000000123456789,Payment,,228.86,,336.30,Loan Payment to TPPL UNSECURED AND CASH SECURED,,
 11/4/2022,21907339,0000000123456789,Payment,'whats with the leading quote,500.00,,565.16,Bill Payment ATB Mastercard to CAD Mastercard,,

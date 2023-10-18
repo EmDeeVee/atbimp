@@ -79,12 +79,12 @@ def test_atbimp_csv_chk_non_exis_file(TestAppArgs):
 #
 @pytest.mark.argv(['csv', 'chk', './tests/no_errors_with_header.tcsv'])
 def test_atbimp_csv_chck_no_errors_with_header(TestAppArgs):
-    # Check a file that has no errors
+    # Check a file that has no errors, except for all the data fields
     report = get_chkreport(TestAppArgs)
     assert TestAppArgs.exit_code == 0
     assert report['linesRead'] == 6
     assert report['dataLinesFound'] == 5
-    assert report['totalErrors'] == 0
+    assert report['totalErrors'] == 5
 
 @pytest.mark.argv(['csv', 'chk', './tests/no_errors_no_header.tcsv'])        
 def test_atbimp_csv_chck_no_errors_no_header(TestAppArgs):
@@ -92,7 +92,7 @@ def test_atbimp_csv_chck_no_errors_no_header(TestAppArgs):
     assert TestAppArgs.exit_code == 0  
     assert report['linesRead'] == 5 
     assert report['dataLinesFound'] == 5
-    assert report['totalErrors'] == 0
+    assert report['totalErrors'] == 5
 
 @pytest.mark.argv(['csv', 'chk', './tests/trailing_comma.tcsv'])        
 def test_atbimp_csv_chck_trailing_comma(TestAppArgs):
@@ -101,7 +101,7 @@ def test_atbimp_csv_chck_trailing_comma(TestAppArgs):
     assert report['linesRead'] == 6
     assert report['dataLinesFound'] == 5
     assert report['trailingComma'] == 3
-    assert report['totalErrors'] == 3
+    assert report['totalErrors'] == 8
         
 @pytest.mark.argv(['csv', 'chk', './tests/wrong_date.tcsv'])
 def test_atbimp_csv_chck_wrong_date(TestAppArgs):
@@ -109,8 +109,8 @@ def test_atbimp_csv_chck_wrong_date(TestAppArgs):
     assert TestAppArgs.exit_code == 0 
     assert report['linesRead'] == 6
     assert report['dataLinesFound'] == 5
-    assert report['incorrectDate'] == 4
-    assert report['totalErrors'] == 4
+    assert report['incorrectDate'] == 5
+    assert report['totalErrors'] == 5
         
 @pytest.mark.argv(['csv', 'chk', './tests/leading_quote.tcsv'])        
 def test_atbimp_csv_chck_leading_quote(TestAppArgs):
@@ -119,18 +119,18 @@ def test_atbimp_csv_chck_leading_quote(TestAppArgs):
     assert report['linesRead'] == 6
     assert report['dataLinesFound'] == 5
     assert report['leadingQuote'] == 2
-    assert report['totalErrors'] == 2
+    assert report['totalErrors'] == 7
 
 @pytest.mark.argv(['csv', 'chk', './tests/mixed_errors.tcsv'])      
 def test_atbimp_csv_chck_mixed_errors(TestAppArgs):
     report = get_chkreport(TestAppArgs)
     assert TestAppArgs.exit_code == 0 
-    assert report['linesRead'] == 6
-    assert report['dataLinesFound'] == 5
-    assert report['incorrectDate'] == 3
+    assert report['linesRead'] == 7
+    assert report['dataLinesFound'] == 6
+    assert report['incorrectDate'] == 6
     assert report['leadingQuote'] == 2
-    assert report['trailingComma'] == 4
-    assert report['totalErrors'] == 9
+    assert report['trailingComma'] == 5
+    assert report['totalErrors'] == 14
         
 # 'fix' uses the same check routines as chk.  So no need for re-testing the
 # checks with the provided input files. However, we are going to write an 
@@ -167,20 +167,21 @@ def test_atbimp_csv_fix_mixed_errors(TestAppArgs):
     # Argparser is satisfied, our controller will set exit code
     report = get_chkreport(TestAppArgs)
     assert TestAppArgs.exit_code == 0 
-    assert report['linesRead'] == 6
-    assert report['dataLinesFound'] == 5
-    assert report['incorrectDate'] == 3
+    assert report['linesRead'] == 7
+    assert report['dataLinesFound'] == 6
+    assert report['incorrectDate'] == 6
     assert report['leadingQuote'] == 2
-    assert report['trailingComma'] == 4
-    assert report['totalErrors'] == 9
+    assert report['trailingComma'] == 5
+    assert report['totalErrors'] == 14
 
 @pytest.mark.argv(['csv', 'chk', './tests/fixed.tcsv'])
 def test_atbimp_csv_chk_fixed(TestAppArgs):
     # Re check the corrected file from the previous test
+    # FIXME: When a quote was found check if it is not already double-single-quoted
     report = get_chkreport(TestAppArgs)
     assert TestAppArgs.exit_code == 0 
-    assert report['linesRead'] == 6
-    assert report['dataLinesFound'] == 5
+    assert report['linesRead'] == 7
+    assert report['dataLinesFound'] == 6
     assert report['incorrectDate'] == 0
     assert report['leadingQuote'] == 0
     assert report['trailingComma'] == 0
@@ -204,4 +205,11 @@ def test_atbimp_csv_imp_mixed(TestAppArgs):
     # TODO: Need another test database file
     report = get_chkreport(TestAppArgs)
     assert TestAppArgs.exit_code == 0 
+    assert report['linesRead'] == 7
+    assert report['dataLinesFound'] == 6
+    assert report['incorrectDate'] == 6
+    assert report['leadingQuote'] == 2
+    assert report['singleQuote'] == 1
+    assert report['trailingComma'] == 5
+    assert report['totalErrors'] == 14
 

@@ -34,10 +34,21 @@ class Csv(Controller):
             "incorrectDate":     0,       # Total number of lines with incorrect date
             "leadingQuote":      0,       # Total number of lines with a leading quote
             "trailingComma":     0,       # Total number of lines with a trailing comma 
+            "singleQuote":       0,       # Total number of lines containing a single quote in text
             "totalErrors":       0,       # Total number of errors found
             "recordsImported":   0,       # Total number of records imported.
-            "recordsExported":   0,       # Total number of records imported.
+            "recordsExported":   0,       # Total number of records exported.
+            "sqlInsertErrors":   0,       # Total number of Sql Insert Errorrs.
         }
+        # date format order used in this file.  We will regocnize the following formats.
+        #   YYYY-MM-DD:     dateOrder will be [1,2,3]   # The format we want.
+        #   m/d/YYYY:       dateOrder will be [3,1,2]   # will be prefixed with 0
+        #   d/m/YYYY:       dateOrder will be [3,2,1]   # will be prefixed with 0
+        #
+        # Output format will always be YYYY-MM-DD
+        #
+        self.dateOrder = [1,2,3]    # Default no change.
+
 
     def _post_argument_parsing(self):
         self.modelAcctTemplate = {
@@ -55,6 +66,79 @@ class Csv(Controller):
     ##
 
     # ----------------------------------------------------------------------
+    # _scan_date_format()
+    # 
+    # will read as many records as needed and available to figure out what
+    # date format is used. Of both the day and month segment stay under 12
+    # we will not be able to figure out the format.  In that case we will 
+    # leave the date as it is.
+    #
+    #   TODO: Make this an argument so the user can force the date format.
+    #
+    @ex(hide=True)
+    def _scan_date_format(self):
+        # Keep reading rows until we know what date format we have in this one
+        #
+        max1 = 0
+        max2 = 0
+        rowsScanned = 0
+
+        # Open the database
+        self.app.sqlite3.set_dbfile(self.app.config.get('atbimp','db_file'))
+        self.app.sqlite3.connect()
+
+        # Create the reader object
+        csv_file = self.app.pargs.csv_file
+        reader = self._createReader(csv_file)
+
+        if reader:
+            row = reader.readline();
+            if self._isHeaderRow(row):
+                # Get another one
+                row = reader.readline()
+
+            dTok=row[0].split('-')
+            if len(dTok) == 3:
+                # Asuming YYYY-MM-DD format.  We're done.  No further checks for now
+                self.app.log.info('Date seems to be in correct format.  Using: YYYY-MM-DD')
+                self.app.sqlite3.close()
+                return rowsScanned+1
+
+            dTok = row[0].split('/')
+            if len(dTok) != 3:
+                self.app.log.error('Cannot regognize date format.  Aborting date check')
+                self.app.sqlite3.close()
+                return rowsScanned+1
+            
+            # Go trough the motions
+            while max1<=12 and max2<12 and row:
+                max1 = max(max1,int(dTok[0]))
+                max2 = max(max2,int(dTok[1]))
+                rowsScanned+=1
+                row = reader.readline();
+
+            # Finished scanning or no more lines to check, let's see if we have
+            # an outcome.
+            #
+            self.app.sqlite3.close()
+
+            if max1<=12 and max2>12:
+                self.dateOrder = [3,1,2]    # change m/d/Y -> Y-m-d
+                self.app.log.info("Found date format in csv file: {m/d/Y}")
+            elif max2<=12 and max1>12:
+                self.dateOrder = [3,2,1]    # change d/m/Y  -> Y-m-d
+                self.app.log.info("Found date format in csv file: {d/m/Y}")
+            else:
+                self.app.log.warning('Not enhough data to check format. found x/y/z format assuming m/d/y.')
+                self.dateOrder = [3,1,2]
+            
+            return rowsScanned
+        else:
+            self.app.exit_code = self.app.EC_FILE_NOT_FOUND
+
+
+
+    # ----------------------------------------------------------------------
     # _check_row:  Check the current row for known ATB csv errors
     #
     @ex(hide=True)
@@ -62,41 +146,73 @@ class Csv(Controller):
         '''
         _check_row(row, rowNum): Check and fix the current row for known ATB csv issues.
             1) date incorrect format: months and days<10 are sometimes
-                not prefixed with a 0
+                not prefixed with a 0 and some files do m/d/y others do d/m/y
             2) Customer_Ref_Number (field:4) is sometimes preceded with a single (') without
                 a closing quote.
             3) The header has 10 fields, where as some data lines have a trailing (,) thus
                 generating 11 fields.
+            4) The description (field:8) may contain single quotes.  Since none of the fields in the
+                csv file are quoted, this is a trainwreck waiting to happen.  
         '''
-
-        # Date `row[0]' has inconconsistend date format
-        # check and fix
-        #
-        dTok = row[0].split('/')
-        if not (len(dTok[0]) == 2 and len(dTok[1]) == 2 and len(dTok[2]) == 4):
-            newDate = "%s/%s/%s" % (('00'+dTok[0])[-2:], ('00'+dTok[1])[-2:], dTok[2])
-            self.app.log.warning('  - line(%d):\tIncorrect date format: %s => %s' % (self.chkreport["linesRead"
-            ], row[0], newDate))
+        # ----------------------------------------------------------------------------------
+        # Check 1: 
+        #   Date `row[0]' has inconconsistend date format
+        #   check and fix
+        warn=""
+        if self.dateOrder != [1,2,3]:
+            # We have to convert d/m/Y or m/d/Y to YYYY-MM-DD
+            dTok = row[0].split('/')
+            warn = f"  - line({self.chkreport['linesRead']}):\tIncorrect date format: {row[0]} =>  "
             self.chkreport["incorrectDate"]+=1
             self.chkreport["totalErrors"]+=1
-            row[0] = newDate
+        else:
+            # We should have y-m-d
+            dTok = row[0].split('-')
 
 
-        # Customer Ref Number `row[4]' sometimes has a leading "`" without
-        # a closing one.  check and fix
+        # Convert the date to the requested format and add a leading 0 
+        # when needed.
+        newDate = f"{dTok[self.dateOrder[0]-1]}-{dTok[self.dateOrder[1]-1]:02}-{dTok[self.dateOrder[2]-1]:02}"
+        row[0] = newDate
+        if len(warn):
+            self.app.log.warning(f"{warn}{newDate}")
+
+
+
+        # ----------------------------------------------------------------------------------
+        # Check 2:
+        #   Customer Ref Number `row[4]' sometimes has a leading "`" without
+        #   a closing one.  check and fix
         #
         if len(row[4]) and row[4][0] == "'":
-            self.app.log.warning('  - line(%d):\tCust Ref field has leading (\'): %s => %s' % (self.chkreport["linesRead"
-            ], row[4], row[4][1:]))
+            self.app.log.warning(f'  - line({self.chkreport["linesRead"]}):\tCust Ref field has leading (\'): {row[4]} => {row[4][1:]}')
             self.chkreport["leadingQuote"]+=1
             self.chkreport["totalErrors"]+=1
             row[4] = row[4][1:]
 
-        # Some rows have a trailing comma giving it 11 cols instead of 10
-        # check and fix
+        # ----------------------------------------------------------------------------------
+        # Check 3:
+        #   Description, field:8 may have single quotes in it.  Can't have that let's (single quotes see)
+        #   so let's resplace them direct to sql quoting.  (aka: double-single-quotes)
+
+        # simple fix
+        if len(row[8].split("'")) != 1:
+            data = "''".join([i for i in row[8].split("'") if i])
+
+            # if new == old then there where no single quotes, only double-single-qoutes
+            if len(data) != len(row[8]):
+                self.app.log.warning(f'  - line({self.chkreport["linesRead"]}):\tSingle quotes found in description: Escaping')
+                self.chkreport['singleQuote']+=1
+                self.chkreport['totalErrors']+=1
+
+            row[8] = data
+
+        # ----------------------------------------------------------------------------------
+        # Check 4:
+        #   Some rows have a trailing comma giving it 11 cols instead of 10
+        #   check and fix
         if len(row) == 11:
-            self.app.log.warning('  - line(%d):\tWrong number of cols, trailing (,): Truncating' % self.chkreport["linesRead"
-            ])
+            self.app.log.warning(f'  - line({self.chkreport["linesRead"]}):\tWrong number of cols, trailing (,): Truncating')
             self.chkreport["trailingComma"]+=1
             self.chkreport["totalErrors"]+=1
             row.pop()
@@ -121,13 +237,14 @@ class Csv(Controller):
     # _createReader():  Check the current row for known ATB header
     #
     @ex(hide=True)
-    def _createReader(self, csv_file):
+    def _createReader(self, csv_file, beSilent:bool = False):
         '''
         _createReader(csv_file)   Create a reader object and report this to user
         '''
         # See if file exists and we can open this
-        self.app.log.info(f"Checking and importing from csv file: {csv_file}")
-        self.chkreport["fileChecked"] = csv_file
+        if not beSilent:
+            self.app.log.info(f"Checking and importing from csv file: {csv_file}")
+            self.chkreport["fileChecked"] = csv_file
         reader = CsvReader()
 
         # Sniffer doesn't work on Atb Files, since it needs quoted values
@@ -185,16 +302,19 @@ class Csv(Controller):
         # Our data objects are ready
         # First the accounts table
         qry={'query': 'id, alias', 'from': 'accounts', 'where': f"alias LIKE '{dataAcct['alias']}'"}
-        ret = self.app.sqlite3.select(qry)[0]
+        ret = self.app.sqlite3.select(qry)
         if not len(ret):
             # This account is not in the db yet. 
             self.app.sqlite3.insert({'into': 'accounts', 'data': dataAcct})
 
             # Try again
-            ret = self.app.sqlite3.select(qry)[0]
+            ret = self.app.sqlite3.select(qry)
             if not len(ret): 
                 # give up
                 return False
+
+        # Only interested in the first row answer of this query
+        ret=ret[0]
 
         # We now have an id for our dataTrans object
         datTrans['accounts_id'] = ret['id']
@@ -217,10 +337,11 @@ class Csv(Controller):
                 return False
             
         # We should be good to insert
-        self.app.sqlite3.insert({'into': modelName, 'data': datTrans})
+        if self.app.sqlite3.insert({'into': modelName, 'data': datTrans}) == 1:
+            return True
 
         # That's all there is to it.
-        return True
+        return False
             
 
 
@@ -247,6 +368,10 @@ class Csv(Controller):
                                     import table will be zapped.
 
         '''
+        # Scan our input file to see what date format we need to use.
+        #
+        self._scan_date_format()
+
         # Open the database
         self.app.sqlite3.set_dbfile(self.app.config.get('atbimp','db_file'))
         self.app.sqlite3.connect()
@@ -265,30 +390,38 @@ class Csv(Controller):
         csv_file = self.app.pargs.csv_file
         reader = self._createReader(csv_file)
             
-        # Read the first line
-        row = reader.readline(); self.chkreport["linesRead"]+=1
-        if self._isHeaderRow(row): 
-            self.app.log.warning(f'  - Skipping header line: (1){row[0]}....')
-            # Get another one
+        if reader:
+            # Read the first line
             row = reader.readline(); self.chkreport["linesRead"]+=1
+            if self._isHeaderRow(row): 
+                self.app.log.warning(f'  - Skipping header line: (1){row[0]}....')
+                # Get another one
+                row = reader.readline(); self.chkreport["linesRead"]+=1
 
-        # Go trough the motions
-        while not row is None:
-            self._check_row(row) ; self.chkreport["dataLinesFound"]+=1
-            self._import_transaction(row)
+            # Go trough the motions
+            while not row is None:
+                self._check_row(row) ; self.chkreport["dataLinesFound"]+=1
+                if self._import_transaction(row):
+                    self.chkreport["recordsImported"]+=1
+                else:
+                    self.chkreport["sqlInsertErrors"]+=1
 
-            row = reader.readline(); self.chkreport["linesRead"]+=1
+
+                row = reader.readline(); self.chkreport["linesRead"]+=1
 
 
-        # Last line doesn't count
-        self.chkreport["linesRead"]-=1
+            # Last line doesn't count
+            self.chkreport["linesRead"]-=1
 
-        # Looks like we're all done.  Let's print the results.
-        #
-        data = {}
-        data["report"] = self.chkreport
-        self.app.render(data, 'csv/report.jinja2')
-        self.app.sqlite3.close()
+            # Looks like we're all done.  Let's print the results.
+            #
+            data = {}
+            data["report"] = self.chkreport
+            self.app.render(data, 'csv/report.jinja2')
+            self.app.sqlite3.close()
+        else:
+            self.app.exit_code = self.app.EC_FILE_NOT_FOUND
+
 
     # ----------------------------------------------------------------------
     # chk: The check function as called from the command line
@@ -306,6 +439,10 @@ class Csv(Controller):
         '''
         chk | check <csv_file>     check the csv file for know ATB csv issues.  
         '''
+        # Scan our input file to see what date format we need to use.
+        #
+        self._scan_date_format()
+
         # Create the reader object
         csv_file = self.app.pargs.csv_file
         reader = self._createReader(csv_file)
@@ -353,6 +490,10 @@ class Csv(Controller):
         '''
         fix  <csv_file> <exp_file>     check the csv file for know ATB csv issues.  
         '''
+        # Scan our input file to see what date format we need to use.
+        #
+        self._scan_date_format()
+
         csv_file = self.app.pargs.csv_file
         exp_file = self.app.pargs.exp_file
         # TODO: Not used.  Build an option to add default header 
