@@ -178,7 +178,7 @@ class Csv(Controller):
 
         # Convert the date to the requested format and add a leading 0 
         # when needed.
-        newDate = f"{dTok[self.dateOrder[0]-1]}-{dTok[self.dateOrder[1]-1]:02}-{dTok[self.dateOrder[2]-1]:02}"
+        newDate = f"{dTok[self.dateOrder[0]-1]}-{dTok[self.dateOrder[1]-1]:0>2}-{dTok[self.dateOrder[2]-1]:0>2}"
         row[0] = newDate
         if len(warn):
             self.app.log.warning(f"{warn}{newDate}")
