@@ -57,7 +57,13 @@ class Csv(Controller):
         }
 
         self.modelTransTemplate = {
-            'fields': self.app.config.get('atbimp','db_account_tbl_cols')
+            'name': 'transactions',
+            'fields': self.app.config.get('atbimp','db_transactions_tbl_cols')
+        }
+
+        self.modelMonthTemplate = {
+            'name': 'months',
+            'fields': self.app.config.get('atbimp','db_months_tbl_cols')
         }
 
     
@@ -264,10 +270,12 @@ class Csv(Controller):
         # Make a dict of our row
         dataIn = dict(zip(self.app.config.get('atbimp','exp_tbl_cols'),row))
 
-        # First split data in two sets
+        # First split data in three sets
+
+        # accounts
         fieldsAcct = tuple(map(lambda x:re.split("'",x)[1], self.modelAcctTemplate['fields']))
         dataAcct = dict(zip(
-            fieldsAcct[1:],
+            fieldsAcct[1:],     # skip id
             (
                 dataIn['account_number'][-4:],
                 f"{int(dataIn['account_rtn']):09}",     # Convert to 9 digits with leading 0
@@ -275,7 +283,20 @@ class Csv(Controller):
             )
         ))
 
+        # months
+        fieldsMonths = tuple(map(lambda x:re.split("'",x)[1], self.modelMonthTemplate['fields']))
+        dataMonths = dict(zip(
+            fieldsMonths[1:],   # skip id
+            (
+                int(dataIn['date'][:4]),        # Year as an integer
+                int(dataIn['date'][5:7])        # Month as an integer
+            )
+        ))
+
             
+
+        # transactions
+
         # We don't want Debit and credit in a seperate cols
         if len(row[5]):
             # debit
@@ -286,7 +307,7 @@ class Csv(Controller):
 
         fieldsTrans = tuple(map(lambda x:re.split("'",x)[1], self.modelTransTemplate['fields']))
         datTrans = dict(zip(
-            fieldsTrans[2:],
+            fieldsTrans[3:],    # Skip id, accounts_id and months_id for now
             (
                 dataIn['date'],
                 dataIn['transaction_type'],
@@ -319,25 +340,46 @@ class Csv(Controller):
         # We now have an id for our dataTrans object
         datTrans['accounts_id'] = ret['id']
 
-        # Let's add the second part of our transaction.
-        # each account will get it's won table.
-        # so let's see what table we need and if it already
-        # exits.
-        modelName = f"acct_{ret['alias']}"
-        model = self.app.sqlite3.show_tables(modelName)
-        if len(model) == 0:
-            # Nope, let's make one
-            # TODO: We want to use model and col and not table and fields. (dinosour!)
-            self.app.sqlite3.create_table({'name': modelName, 'fields': self.modelTransTemplate['fields']})
+        # Next we want to place the year-month in a different table to
+        # speed up searches on complete months.
+        qry={'query': '*', 'from': 'months', 'where': f"year={dataMonths['year']} and month={dataMonths['month']}"}
+        ret = self.app.sqlite3.select(qry)
+        if not len(ret):
+            # This year-date combo is not yet in the database
+            self.app.sqlite3.insert({'into': 'months', 'data': dataMonths})
 
             # Try again
-            model = self.app.sqlite3.show_tables(modelName)
-            if len(model) == 0:
+            ret = self.app.sqlite3.select(qry)
+            if not len(ret):
                 # Give up
                 return False
             
+        # Only interested in the first row answer of this query
+        ret=ret[0]
+
+        # We now have an id for our dataTrans object
+        datTrans['months_id'] = ret['id']
+        
+
+        # # Let's add the last part of our transaction.
+        # # each account will get it's won table.
+        # # so let's see what table we need and if it already
+        # # exits.
+        # modelName = f"acct_{ret['alias']}"
+        # model = self.app.sqlite3.show_tables(modelName)
+        # if len(model) == 0:
+        #     # Nope, let's make one
+        #     # TODO: We want to use model and col and not table and fields. (dinosour!)
+        #     self.app.sqlite3.create_table({'name': modelName, 'fields': self.modelTransTemplate['fields']})
+
+        #     # Try again
+        #     model = self.app.sqlite3.show_tables(modelName)
+        #     if len(model) == 0:
+        #         # Give up
+        #         return False
+            
         # We should be good to insert
-        if self.app.sqlite3.insert({'into': modelName, 'data': datTrans}) == 1:
+        if self.app.sqlite3.insert({'into': 'transactions', 'data': datTrans}) == 1:
             return True
 
         # That's all there is to it.
@@ -375,6 +417,8 @@ class Csv(Controller):
         # Open the database
         self.app.sqlite3.set_dbfile(self.app.config.get('atbimp','db_file'))
         self.app.sqlite3.connect()
+
+        # Check Model accounts
         modelAccounts = self.app.sqlite3.show_tables('accounts')
         if len(modelAccounts) == 0:
             # model is not there.  We have to create one.
@@ -383,6 +427,30 @@ class Csv(Controller):
             modelAccounts = self.app.sqlite3.show_tables('accounts')
             if len(modelAccounts) == 0:
                 # again?  Give up  
+                # FIXME essential db, we should somehow return an error and exit the program
+                return
+
+        # Check Model months
+        modelAccounts = self.app.sqlite3.show_tables('months')
+        if len(modelAccounts) == 0:
+            # model is not there.  We have to create one.
+            self.app.sqlite3.create_table(self.modelMonthTemplate)
+            # Try again
+            modelAccounts = self.app.sqlite3.show_tables('months')
+            if len(modelAccounts) == 0:
+                # again?  Give up  
+                # FIXME essential db, we should somehow return an error and exit the program
+                return
+            
+        # Check Model transactions
+        modelTransactions = self.app.sqlite3.show_tables('transactions')
+        if len(modelTransactions) == 0:
+            # model is not there. We have to create one.
+            self.app.sqlite3.create_table(self.modelTransTemplate)
+            # Try again
+            modelTransactions = self.app.sqlite3.show_tables('transactions')
+            if len(modelTransactions) == 0:
+                # again? Give up
                 # FIXME essential db, we should somehow return an error and exit the program
                 return
 

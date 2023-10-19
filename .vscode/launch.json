@@ -49,5 +49,14 @@
             "console": "integratedTerminal",
             "justMyCode": false
         },
+        {
+            "name": "atbimp csv imp {mixed}",
+            "type": "python",
+            "request": "launch",
+            "program": "env/bin/atbimp",
+            "args": "-d csv imp tests/mixed_errors.tcsv",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
     ]
 }

@@ -213,3 +213,8 @@ def test_atbimp_csv_imp_mixed(TestAppArgs):
     assert report['trailingComma'] == 5
     assert report['totalErrors'] == 14
 
+    # Last test.   Cleanup our db
+    dbfile = TestAppArgs.sqlite3.get_dbfile()
+    if os.path.exists(dbfile):
+        os.remove(dbfile)
+

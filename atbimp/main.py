@@ -41,23 +41,32 @@ CONFIG['atbimp']['exp_tbl_cols'] = [
 # db_accounts_tbl:
 #
 # In our version of the database there will be a list of acounts in the 'accounts' table.
-# This table will hold a list of all back accounts found.  The transactions will be placed
-# in seperate tables, one per account.
+# This table will hold a list of all back accounts found. 
 #
 CONFIG['atbimp']['db_accounts_tbl_cols'] = [
     "'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
     "'alias' TEXT",                     # Last 4 digits of our account number
     "'acct_routing' TEXT",              # bank routing info
-    "'acct_number' TEXT"                # your account number
+    "'acct_number' TEXT",               # your account number
+    "'nick_name', TEXT"                 # a nick name that can be provided by the user
+]
+
+# We put the year-month porttion of the data into a separate table, just to speed up
+# looking for all transaction of a particular month.
+CONFIG['atbimp']['db_months_tbl_cols'] = [
+    "'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
+    "'year' INTEGER",                   # Last 4 digits of our account number
+    "'month' INTEGER",                  # bank routing info
 ]
 
 # db_account_tbl_cols:
 #
 # Table structure of each account table.  Tables will be named the alias of the account.
 #
-CONFIG['atbimp']['db_account_tbl_cols'] = [
+CONFIG['atbimp']['db_transactions_tbl_cols'] = [
     "'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
-    "'accounts_id' INTEGER",
+    "'accounts_id' INTEGER",    # The link with the accounts table
+    "'months_id', INTEGER",     # The link to months table
     "'date' TEXT",
     "'transaction_type' TEXT",
     "'customer_ref_number' TEXT",
