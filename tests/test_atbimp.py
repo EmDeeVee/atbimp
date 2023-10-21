@@ -32,8 +32,25 @@ def TestAppArgs(request):
         app.run()
         yield app
 
+@pytest.fixture
+def TestAppDb(request):
+    argv = request.node.get_closest_marker('argv').args[0]
+    with AtbImpAppTest(argv=argv) as app:
+        # In this case we need the models that belong to 
+        # our appliction.  In the previous tests we didn't
+        # want them.  So no <models> dict in the TestApp
+        #
+        app.models = [
+            'months',
+            'transactions',
+            'accounts'
+        ]
+        app.run()
+        yield app
 
-def test_atbimp(TestAppNoArg):
+
+
+def test_atbimp(TestAppNoArg: AtbImpAppTest):
     # test atbimp without any subcommands or arguments
     assert TestAppNoArg.exit_code == 0
 
@@ -200,11 +217,11 @@ def test_atbimp_csv_imp_no_args():
             assert e_info.code == 2
 
 @pytest.mark.argv(['csv', 'imp', './tests/mixed_errors.tcsv'])
-def test_atbimp_csv_imp_mixed(TestAppArgs):
+def test_atbimp_csv_imp_mixed(TestAppDb):
     # Try importing our test file mixed.tcsv
     # TODO: Need another test database file
-    report = get_chkreport(TestAppArgs)
-    assert TestAppArgs.exit_code == 0 
+    report = get_chkreport(TestAppDb)
+    assert TestAppDb.exit_code == 0 
     assert report['linesRead'] == 7
     assert report['dataLinesFound'] == 6
     assert report['incorrectDate'] == 6
@@ -214,7 +231,7 @@ def test_atbimp_csv_imp_mixed(TestAppArgs):
     assert report['totalErrors'] == 14
 
     # Last test.   Cleanup our db
-    dbfile = TestAppArgs.sqlite3.get_dbfile()
+    dbfile = TestAppDb.sqlite3.get_dbfile()
     if os.path.exists(dbfile):
         os.remove(dbfile)
 

@@ -11,7 +11,8 @@ from .controllers.csv import Csv
 #
 # TODO: figure out how this works with a cement yaml config file
 #
-CONFIG = init_defaults('atbimp')
+CONFIG = init_defaults('atbimp', 'db.sqlite3')
+
 # CONFIG['atbimp']['db_file'] = '~/.atbimp/transactions.db3'
 CONFIG['atbimp']['db_file'] = './transactions.db3'
 
@@ -43,17 +44,17 @@ CONFIG['atbimp']['exp_tbl_cols'] = [
 # In our version of the database there will be a list of acounts in the 'accounts' table.
 # This table will hold a list of all back accounts found. 
 #
-CONFIG['atbimp']['db_accounts_tbl_cols'] = [
+CONFIG['db.sqlite3']['accounts'] = [
     "'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
     "'alias' TEXT",                     # Last 4 digits of our account number
     "'acct_routing' TEXT",              # bank routing info
     "'acct_number' TEXT",               # your account number
-    "'nick_name', TEXT"                 # a nick name that can be provided by the user
+    "'nick_name' TEXT"                 # a nick name that can be provided by the user
 ]
 
 # We put the year-month porttion of the data into a separate table, just to speed up
 # looking for all transaction of a particular month.
-CONFIG['atbimp']['db_months_tbl_cols'] = [
+CONFIG['db.sqlite3']['months'] = [
     "'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
     "'year' INTEGER",                   # Last 4 digits of our account number
     "'month' INTEGER",                  # bank routing info
@@ -63,19 +64,20 @@ CONFIG['atbimp']['db_months_tbl_cols'] = [
 #
 # Table structure of each account table.  Tables will be named the alias of the account.
 #
-CONFIG['atbimp']['db_transactions_tbl_cols'] = [
+CONFIG['db.sqlite3']['transactions'] = [
     "'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
     "'accounts_id' INTEGER",    # The link with the accounts table
-    "'months_id', INTEGER",     # The link to months table
+    "'months_id' INTEGER",     # The link to months table
     "'date' TEXT",
     "'transaction_type' TEXT",
     "'customer_ref_number' TEXT",
     "'amount' REAL",
     "'dc' TEXT",                # is the amount Debit or Credit (D/C)
-    "'balance' TEXT",           # running balance
+    "'balance' REAL",           # running balance
     "'description' TEXT",
     "'bank_reference' TEXT"
 ]
+
 
 class AtbImpApp(App):
     """ATB CSV Import and List Application primary application."""
@@ -118,9 +120,22 @@ class AtbImpApp(App):
         # hooks
         hooks = []
 
+
+
+    # models to use in our app.  All models listed here wil expect a 
+    # config["model"]["{modelName}"] setting with the layout.
+    # these models will automatically created if they don't exist
+    models = [
+        'months',
+        'transactions',
+        'accounts'
+    ]
+
     # Error codes.  We don't know what exit codes cement uses
     # so lets start ours at 128
     EC_FILE_NOT_FOUND = 128
+
+
 
 
 
@@ -129,6 +144,9 @@ class AtbImpAppTest(TestApp,AtbImpApp):
 
     class Meta:
         label = 'atbimp'
+
+    # Override models, so we don't automatically create tehm
+    models = []
 
 
 def main():

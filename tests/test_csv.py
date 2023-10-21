@@ -66,7 +66,7 @@ def write_csv_oneliner():
     return False
 
 def write_csv_data():
-    # Write some bogus records to our file
+    # Write some bogus records to our file``
     data = [
         '1,Kermit,"The Frog",kermit@muppets.local\n',
         '2,Miss,Piggy,misspiggy@muppets.local\n',

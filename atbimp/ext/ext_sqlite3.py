@@ -10,6 +10,8 @@ from cement.utils import fs
 
 LOG = minimal_logger(__name__)
 
+
+
 def sqlite3_pre_run_hook(app):
     # Add the sqlite3 member to app and attach it with the
     # database.sqlite3 handler.
@@ -17,6 +19,13 @@ def sqlite3_pre_run_hook(app):
     LOG.debug('Inside sqlite3_pre_run_hook! Seting up sqlite3 handler')
     _handler = app.handler.get('db', 'sqlite3')
     app.sqlite3=_handler()
+    app.sqlite3.setup(app)
+
+def sqlite3_post_run_hook(app):
+    # Close database
+    if app.sqlite3._con:
+        app.sqlite3.close()
+
 
 class DatabaseInterface(Interface):
     """
@@ -45,6 +54,7 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
     _db_file= "mydatabase.db3"      # internal member hoding the db file
     _con = None                     # db connection
     _cur = None                     # db cursor
+    _models = []                    # list of models we use
     
 
     def __init__(self, *args, **kw):
@@ -52,83 +62,105 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         self._sqlite3 =  __import__(self.Meta.sqlite3_module, 
                                    globals(), locals(), 0)
 
-    def __setup__(self, app):
-        super()._setup(app)
+    def setup(self, app):
+        # Open database and populate our models, if they don't
+        # already exist
+        #
+
+        # FIXME:  Probably the wrong place for this. Since we now have
+        # setup the app of our extension self.  Cement documentation
+        # not clear on how to handle this.
+        app.sqlite3.app = app
+        if len(app.models):
+            app.sqlite3.set_dbfile(app.config.get(app.label, 'db_file'))
+            app.sqlite3.connect()
+            app.sqlite3.models = {}
+            for modelName in app.models:
+                model = app.sqlite3._check_or_create_app_model(modelName)        
+                app.sqlite3.models.update({f"{modelName}": model[0]})
+
 
 
     # ========================================================================
     # Helper Functions
     # ========================================================================
 
-    def _mkdict(self, labels, values):
-        # Create a dict from two tuples
-        # FIXME:  Discard and use dict(zip(...))
-        #
-        if len(labels) > 0 and len(values) > 0 and len(labels) == len(values):
-            ret = {}
-            for i,value in enumerate(values):
-                ret[labels[i]] = value
-        else: 
-            return None
-        
-        return ret
+    def _check_or_create_app_model(self, modelName):
+        model = self.show_models(modelName)
+        if len(model) == 0:
+            # model is not there, we have to create one
+            self.create_model({'name': modelName, 'fields': self.app.config.get('db.sqlite3', modelName)})
+            # Try again
+            model = self.show_models(modelName)
+            if len(model) == 0:
+                # again?  give up
+                raise AttributeError
 
-    def _get_table_info(self, tbl):
+        return model
+
+
+    def _get_model_info(self, model):
         # get table fields
         # 
         # Return will be something like this
         # {
-        #     "name": "test",
-        #     "fields": [
-        #         {
+        #     "name": "testdb",
+        #     "fields": {
+        #         "id": {
+        #             "cid": 0,
         #             "name": "id",
         #             "type": "INTEGER",
         #             "notnull": 0,
         #             "dflt_value": null,
-        #             "pk": 0
+        #             "pk": 1
         #         },
-        #         {
+        #         "date": {
+        #             "cid": 1,
         #             "name": "date",
         #             "type": "DATE",
         #             "notnull": 0,
         #             "dflt_value": null,
         #             "pk": 0
         #         },
-        #         {
+        #         "txt": {
+        #             "cid": 2,
         #             "name": "txt",
         #             "type": "TEXT",
         #             "notnull": 0,
         #             "dflt_value": null,
         #             "pk": 0
         #         },
-        #         {
+        #         "price": {
+        #             "cid": 3,
         #             "name": "price",
         #             "type": "DECIMAL(10,2)",
         #             "notnull": 0,
         #             "dflt_value": null,
         #             "pk": 0
         #         }
-        #     ]
+        #     }
         # }
-        if len(tbl) == 0:
+        if len(model) == 0:
             raise ValueError
         
+        if type(model) == str:
+            modelName = model
+        elif type(model) == dict:
+            modelName = model['name']
+
         try:
-            stmt = f"PRAGMA table_info({tbl})"
+            stmt = f"PRAGMA table_info({model})"
             res = self._cur.execute(stmt)
             fields=res.fetchall()
         except:
             raise ConnectionError
 
-        ret = {'name': 'test', 'fields': []}
+        ret = {'name': model, 'fields': {} }
         labels = tuple(x[0] for x in self._cur.description)
 
         for fld in fields:
-            # PRAGMA table_info returns a cid (column id) as the first
-            # item in the tuple.  We have no use for that. Hence fld[1:]
-            # and labels[1:]
-            dictFld = self._mkdict(labels[1:], fld[1:])
-            ret['fields'].append(dictFld)
+            fdict=dict(zip(labels,fld))
+            ret['fields'].update({f'{fdict["name"]}': fdict})
 
         return ret
 
@@ -188,12 +220,12 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
             except:
                 raise ConnectionError('Error opening db file')
             
-    def create_table(self, dictTable):
+    def create_model(self, dictModel):
         '''
-        create_table()          Creates a new table
+        create_model()          Creates a new table
 
         Paremeters:
-            dictTable:          dict to describe model. eg:
+            dictModel:          dict to describe model. eg:
         
                                 test_model={
                                     'name':     'test', 
@@ -206,7 +238,7 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
                                 }
 
         Returns:
-            dictTable as returned by PRAGMA table_info()
+            dictModel as returned by PRAGMA table_info()
 
         Raises:
             KeyError:         when dict is of improper format
@@ -214,26 +246,26 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         '''
         # do some basic sanity checking on the dict
         #
-        if len(dictTable) < 1:
-            if (len(dictTable['name']) < 1) and (len(dictTable['fields']) < 1):
+        if len(dictModel) < 1:
+            if (len(dictModel['name']) < 1) and (len(dictModel['fields']) < 1):
                 # We should have a KeyError exeption by now
                 return None
         
         # Let's get to work.
-        sFieldList = ", ".join(dictTable['fields'])
-        stmt = f"CREATE TABLE {dictTable['name']} ({sFieldList})"
+        sFieldList = ", ".join(dictModel['fields'])
+        stmt = f"CREATE TABLE {dictModel['name']} ({sFieldList})"
         try:
             self._cur.execute(stmt)
             self._con.commit()
         except:
             raise ConnectionError
         
-        return self._get_table_info(dictTable['name'])
+        return self._get_model_info(dictModel['name'])
         
 
-    def show_tables(self, filter=""):
+    def show_models(self, filter=""):
         '''
-        show_tables()           Show available tables in db
+        show_models()           Show available tables in db
         
         Parameters:
             filter:             Optinal filter, wich will be added to the WHERE clause
@@ -252,11 +284,10 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         except:
             raise ConnectionError
         
-        labels = tuple(x[0] for x in self._cur.description)
+        # labels = tuple(x[0] for x in self._cur.description)
         ret = []
         for model in models:
-            model_info = self._mkdict(labels, model)
-            ret.append(model_info)
+            ret.append(self._get_model_info(model[1]))
 
         return ret
 
@@ -352,7 +383,7 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         labels = tuple(x[0] for x in self._cur.description)
         ret = []
         for row in res:
-            ret.append(self._mkdict(labels, row))
+            ret.append(dict(zip(labels, row)))
 
         return ret
 
@@ -490,4 +521,5 @@ def load(app):
     app.interface.define(DatabaseInterface)
     app.handler.register(SQLite3Handler)
     app.hook.register('pre_run', sqlite3_pre_run_hook)
+    app.hook.register('post_run', sqlite3_post_run_hook)
 

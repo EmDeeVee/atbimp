@@ -50,26 +50,10 @@ class Csv(Controller):
         self.dateOrder = [1,2,3]    # Default no change.
 
 
-    def _post_argument_parsing(self):
-        self.modelAcctTemplate = {
-            'name': 'accounts',
-            'fields': self.app.config.get('atbimp','db_accounts_tbl_cols')
-        }
-
-        self.modelTransTemplate = {
-            'name': 'transactions',
-            'fields': self.app.config.get('atbimp','db_transactions_tbl_cols')
-        }
-
-        self.modelMonthTemplate = {
-            'name': 'months',
-            'fields': self.app.config.get('atbimp','db_months_tbl_cols')
-        }
-
-    
     ## ====================================================================
     ## Helper Functions
     ##
+
 
     # ----------------------------------------------------------------------
     # _scan_date_format()
@@ -89,10 +73,6 @@ class Csv(Controller):
         max2 = 0
         rowsScanned = 0
 
-        # Open the database
-        self.app.sqlite3.set_dbfile(self.app.config.get('atbimp','db_file'))
-        self.app.sqlite3.connect()
-
         # Create the reader object
         csv_file = self.app.pargs.csv_file
         reader = self._createReader(csv_file)
@@ -107,13 +87,11 @@ class Csv(Controller):
             if len(dTok) == 3:
                 # Asuming YYYY-MM-DD format.  We're done.  No further checks for now
                 self.app.log.info('Date seems to be in correct format.  Using: YYYY-MM-DD')
-                self.app.sqlite3.close()
                 return rowsScanned+1
 
             dTok = row[0].split('/')
             if len(dTok) != 3:
                 self.app.log.error('Cannot regognize date format.  Aborting date check')
-                self.app.sqlite3.close()
                 return rowsScanned+1
             
             # Go trough the motions
@@ -126,8 +104,6 @@ class Csv(Controller):
             # Finished scanning or no more lines to check, let's see if we have
             # an outcome.
             #
-            self.app.sqlite3.close()
-
             if max1<=12 and max2>12:
                 self.dateOrder = [3,1,2]    # change m/d/Y -> Y-m-d
                 self.app.log.info("Found date format in csv file: {m/d/Y}")
@@ -268,14 +244,13 @@ class Csv(Controller):
     @ex(hide=True)
     def _import_transaction(self, row):
         # Make a dict of our row
-        dataIn = dict(zip(self.app.config.get('atbimp','exp_tbl_cols'),row))
+        dataIn = dict(zip(self.app.config.get(self.app.label,'exp_tbl_cols'),row))
 
         # First split data in three sets
 
         # accounts
-        fieldsAcct = tuple(map(lambda x:re.split("'",x)[1], self.modelAcctTemplate['fields']))
         dataAcct = dict(zip(
-            fieldsAcct[1:],     # skip id
+            list(self.app.sqlite3.models['accounts']['fields'].keys())[1:],
             (
                 dataIn['account_number'][-4:],
                 f"{int(dataIn['account_rtn']):09}",     # Convert to 9 digits with leading 0
@@ -284,9 +259,8 @@ class Csv(Controller):
         ))
 
         # months
-        fieldsMonths = tuple(map(lambda x:re.split("'",x)[1], self.modelMonthTemplate['fields']))
         dataMonths = dict(zip(
-            fieldsMonths[1:],   # skip id
+            list(self.app.sqlite3.models['months']['fields'].keys())[1:],
             (
                 int(dataIn['date'][:4]),        # Year as an integer
                 int(dataIn['date'][5:7])        # Month as an integer
@@ -305,9 +279,8 @@ class Csv(Controller):
             # credit
             amt = row[6]; dc = "C"
 
-        fieldsTrans = tuple(map(lambda x:re.split("'",x)[1], self.modelTransTemplate['fields']))
         datTrans = dict(zip(
-            fieldsTrans[3:],    # Skip id, accounts_id and months_id for now
+            list(self.app.sqlite3.models['transactions']['fields'])[3:],  # Skip id, accounts_id and months_id for now
             (
                 dataIn['date'],
                 dataIn['transaction_type'],
@@ -361,24 +334,7 @@ class Csv(Controller):
         datTrans['months_id'] = ret['id']
         
 
-        # # Let's add the last part of our transaction.
-        # # each account will get it's won table.
-        # # so let's see what table we need and if it already
-        # # exits.
-        # modelName = f"acct_{ret['alias']}"
-        # model = self.app.sqlite3.show_tables(modelName)
-        # if len(model) == 0:
-        #     # Nope, let's make one
-        #     # TODO: We want to use model and col and not table and fields. (dinosour!)
-        #     self.app.sqlite3.create_table({'name': modelName, 'fields': self.modelTransTemplate['fields']})
-
-        #     # Try again
-        #     model = self.app.sqlite3.show_tables(modelName)
-        #     if len(model) == 0:
-        #         # Give up
-        #         return False
-            
-        # We should be good to insert
+      # We should be good to insert
         if self.app.sqlite3.insert({'into': 'transactions', 'data': datTrans}) == 1:
             return True
 
@@ -414,46 +370,6 @@ class Csv(Controller):
         #
         self._scan_date_format()
 
-        # Open the database
-        self.app.sqlite3.set_dbfile(self.app.config.get('atbimp','db_file'))
-        self.app.sqlite3.connect()
-
-        # Check Model accounts
-        modelAccounts = self.app.sqlite3.show_tables('accounts')
-        if len(modelAccounts) == 0:
-            # model is not there.  We have to create one.
-            self.app.sqlite3.create_table(self.modelAcctTemplate)
-            # Try again
-            modelAccounts = self.app.sqlite3.show_tables('accounts')
-            if len(modelAccounts) == 0:
-                # again?  Give up  
-                # FIXME essential db, we should somehow return an error and exit the program
-                return
-
-        # Check Model months
-        modelAccounts = self.app.sqlite3.show_tables('months')
-        if len(modelAccounts) == 0:
-            # model is not there.  We have to create one.
-            self.app.sqlite3.create_table(self.modelMonthTemplate)
-            # Try again
-            modelAccounts = self.app.sqlite3.show_tables('months')
-            if len(modelAccounts) == 0:
-                # again?  Give up  
-                # FIXME essential db, we should somehow return an error and exit the program
-                return
-            
-        # Check Model transactions
-        modelTransactions = self.app.sqlite3.show_tables('transactions')
-        if len(modelTransactions) == 0:
-            # model is not there. We have to create one.
-            self.app.sqlite3.create_table(self.modelTransTemplate)
-            # Try again
-            modelTransactions = self.app.sqlite3.show_tables('transactions')
-            if len(modelTransactions) == 0:
-                # again? Give up
-                # FIXME essential db, we should somehow return an error and exit the program
-                return
-
         # Create the reader object
         csv_file = self.app.pargs.csv_file
         reader = self._createReader(csv_file)
@@ -486,7 +402,7 @@ class Csv(Controller):
             data = {}
             data["report"] = self.chkreport
             self.app.render(data, 'csv/report.jinja2')
-            self.app.sqlite3.close()
+
         else:
             self.app.exit_code = self.app.EC_FILE_NOT_FOUND
 
@@ -564,9 +480,6 @@ class Csv(Controller):
 
         csv_file = self.app.pargs.csv_file
         exp_file = self.app.pargs.exp_file
-        # TODO: Not used.  Build an option to add default header 
-        #       line when none exists.
-        # exp_tbl_cols = self.app.config.get('atbimp', 'exp_tbl_cols')
 
         self.app.log.info(f"Checking csv file: {csv_file}")
         self.chkreport["fileChecked"] = csv_file
