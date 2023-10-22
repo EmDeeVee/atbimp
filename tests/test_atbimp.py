@@ -43,7 +43,8 @@ def TestAppDb(request):
         app.models = [
             'months',
             'transactions',
-            'accounts'
+            'accounts',
+            'imports'
         ]
         app.run()
         yield app

@@ -242,11 +242,11 @@ class Csv(Controller):
     # _import_transaction():  Import transaction into database
     #
     @ex(hide=True)
-    def _import_transaction(self, row):
+    def _import_transaction(self, row, importRowId):
         # Make a dict of our row
         dataIn = dict(zip(self.app.config.get(self.app.label,'exp_tbl_cols'),row))
 
-        # First split data in three sets
+        # First split data in a couple of sets
 
         # accounts
         dataAcct = dict(zip(
@@ -280,7 +280,7 @@ class Csv(Controller):
             amt = row[6]; dc = "C"
 
         datTrans = dict(zip(
-            list(self.app.sqlite3.models['transactions']['fields'])[3:],  # Skip id, accounts_id and months_id for now
+            list(self.app.sqlite3.models['transactions']['fields'])[4:],  # Skip id, account_id, month_id and import_id for now
             (
                 dataIn['date'],
                 dataIn['transaction_type'],
@@ -311,7 +311,7 @@ class Csv(Controller):
         ret=ret[0]
 
         # We now have an id for our dataTrans object
-        datTrans['accounts_id'] = ret['id']
+        datTrans['account_id'] = ret['id']
 
         # Next we want to place the year-month in a different table to
         # speed up searches on complete months.
@@ -331,10 +331,12 @@ class Csv(Controller):
         ret=ret[0]
 
         # We now have an id for our dataTrans object
-        datTrans['months_id'] = ret['id']
-        
+        datTrans['month_id'] = ret['id']
+                
 
-      # We should be good to insert
+        # We should be good to insert
+        datTrans['import_id'] = importRowId
+    
         if self.app.sqlite3.insert({'into': 'transactions', 'data': datTrans}) == 1:
             return True
 
@@ -382,10 +384,21 @@ class Csv(Controller):
                 # Get another one
                 row = reader.readline(); self.chkreport["linesRead"]+=1
 
+            # Log import action.
+            importLog =  {
+                'into': 'imports',
+                'data': {
+                    'source': csv_file
+                }
+            }
+            self.app.sqlite3.insert(importLog)
+            impRowId = self.app.sqlite3._cur.lastrowid
+
+
             # Go trough the motions
             while not row is None:
                 self._check_row(row) ; self.chkreport["dataLinesFound"]+=1
-                if self._import_transaction(row):
+                if self._import_transaction(row, impRowId):
                     self.chkreport["recordsImported"]+=1
                 else:
                     self.chkreport["sqlInsertErrors"]+=1

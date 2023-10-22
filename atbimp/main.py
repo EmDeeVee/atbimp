@@ -39,10 +39,10 @@ CONFIG['atbimp']['exp_tbl_cols'] = [
     'bank_reference_number'     #9
 ]
 
-# db_accounts_tbl:
+# db.accounts.tbl:
 #
 # In our version of the database there will be a list of acounts in the 'accounts' table.
-# This table will hold a list of all back accounts found. 
+# This table will hold a list of all bank accounts found. 
 #
 CONFIG['db.sqlite3']['accounts'] = [
     "'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
@@ -52,6 +52,8 @@ CONFIG['db.sqlite3']['accounts'] = [
     "'nick_name' TEXT"                 # a nick name that can be provided by the user
 ]
 
+# db.months.tbl
+#
 # We put the year-month porttion of the data into a separate table, just to speed up
 # looking for all transaction of a particular month.
 CONFIG['db.sqlite3']['months'] = [
@@ -60,14 +62,25 @@ CONFIG['db.sqlite3']['months'] = [
     "'month' INTEGER",                  # bank routing info
 ]
 
-# db_account_tbl_cols:
+# db.imports.table
 #
-# Table structure of each account table.  Tables will be named the alias of the account.
+# logging all the imports that have been done, so in case of duplicates we can 
+# trace back who did what
+#
+CONFIG['db.sqlite3']['imports'] = [
+    "'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
+    "'time_stamp' TEXT DEFAULT CURRENT_TIMESTAMP",
+    "'source' TEXT"
+]
+
+
+# db.transactions.table:
 #
 CONFIG['db.sqlite3']['transactions'] = [
     "'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
-    "'accounts_id' INTEGER",    # The link with the accounts table
-    "'months_id' INTEGER",     # The link to months table
+    "'account_id' INTEGER",    # The link with the accounts table
+    "'month_id' INTEGER",      # The link to months table
+    "'import_id' INTEGER",      # The link with the imports table
     "'date' TEXT",
     "'transaction_type' TEXT",
     "'customer_ref_number' TEXT",
@@ -128,7 +141,8 @@ class AtbImpApp(App):
     models = [
         'months',
         'transactions',
-        'accounts'
+        'accounts',
+        'imports'
     ]
 
     # Error codes.  We don't know what exit codes cement uses
