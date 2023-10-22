@@ -98,6 +98,33 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
 
         return model
 
+    def _lookup_inventory(self, inventory_type, filter=''):
+        # Lookup tables, views and indexes in sqlite_master table.
+        # 
+        
+        # internal functions.  No param checking.  Should be oke
+        if len(filter):
+            filter = f"AND tbl_name LIKE '{filter}'"
+
+        stmt = f"SELECT * FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' AND type='{inventory_type}' {filter};"
+        try:
+            self._cur.execute(stmt)
+            inventory = self._cur.fetchall()
+        except:
+            raise ConnectionError
+        
+        ret = []
+        for item in inventory:
+            if inventory_type == 'table':
+                ret.append(self._get_model_info(item[1]))
+            elif inventory_type == 'index':
+                ret.append(self._get_index_info(item[1]))
+            else:
+                pass
+
+        return ret
+
+
 
     def _get_model_info(self, model):
         # get table fields
@@ -155,7 +182,7 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         except:
             raise ConnectionError
 
-        ret = {'name': model, 'fields': {} }
+        ret = {'name': modelName, 'fields': {} }
         labels = tuple(x[0] for x in self._cur.description)
 
         for fld in fields:
@@ -164,6 +191,32 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
 
         return ret
 
+    def _get_index_info(self, index):
+        # Will return a dict {'name': <name>, 'fields': [<fld>,<fld>,...]}
+        #
+        if len(index) == 0:
+            raise ValueError
+        
+        if type(index) == str:
+            indexName = index
+        elif type(index) == dict:
+            indexName = index['index']
+        else:
+            raise ValueError
+        
+        try:
+            stmt = f"PRAGMA index_info({indexName});"
+            res = self._cur.execute(stmt)
+            fields=res.fetchall()
+        except:
+            raise ConnectionError
+
+        ret = {'name': indexName, 'fields': [] }
+        for row in fields:
+            ret['fields'].append(row[2])
+
+        return ret
+            
 
     def _values2str(self, values):
         # Convert tuple of values into a string, unquoting sqlite statments that start with a '#'
@@ -273,35 +326,68 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
                                 
         Retuns:                 An Array of dicts containing the table_info for each table found
         '''
+        return self._lookup_inventory('table', filter)
+    
 
-        if len(filter):
-            filter = f"AND [name] LIKE '{filter}'"
+    def create_index(self, index, bUnique=False, bIfNotEists=False):
+        ''' 
+        create_index() -> bSuccess     Create index on Model.
 
-        stmt = f"SELECT * FROM sqlite_schema WHERE NAME NOT LIKE 'sqlite_%' {filter}"
-        try:
-            self._cur.execute(stmt)
-            models = self._cur.fetchall()
-        except:
-            raise ConnectionError
-        
-        # labels = tuple(x[0] for x in self._cur.description)
-        ret = []
-        for model in models:
-            ret.append(self._get_model_info(model[1]))
+        parameters:
+            index:          <string>
+                            eg: "test_idx ON test(price)"
+            bUnique:        <bool> (default False)
+                            add the UNIQUE constraint
+            bIfNotExists    <bool> (defualt False)
+                            add the 'IF NOT EXISTS' constrained.
 
-        return ret
+        or: 
+            index:          <dict>  
+                            pars: bUnique, bIfnotExist will be ignored
+                            {
+                                'index':        'test_idx',
+                                'model':        'test',
+                                'fields':       'date,price',
+                                'unique':       True,    # optional
+                                'ifnotexists':  True,    # optional
+                            }                                
 
+        Returns:
+            True, or raises error
 
-    def create_index(self, index):
-        ''' Create index on Model.'''
-        
-        # Sanity check
-        if len(index) == 0:
-            raise ValueError
-        
-        # Create our statment.
+        Raises:
+            ValueError:         When index param is empty
+            ConnectionError:    error in SQL statement.
+        '''
         if type(index) == str:
-            stmt = f"CREATE INDEX {index}"
+            if len(index) == 0:
+                raise ValueError
+            
+        elif type(index) == dict:
+            if 'unique' in index:
+                bUnique = index['unique']
+            if 'ifnotexists' in 'index':
+                bIfNotEists = index['ifnotexists']
+        else:
+            raise ValueError
+
+        unique = ''
+        if bUnique: 
+            unique = "UNIQUE"
+
+        ifnotexists = ''
+        if bIfNotEists:
+            ifnotexists = 'IF NOT EXISTS'
+
+
+        # Create our statment.
+        stmt = f"CREATE {unique} INDEX {ifnotexists} "
+        if type(index) == str:
+             stmt+=index
+        elif type(index) == dict:
+            stmt+=f"{index['index']} ON {index['model']}({index['fields']})"
+    
+        stmt+=';'
         
         # execute our statment
         try:
@@ -312,6 +398,20 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         
         return True
         
+    def show_indexes(self, table=''):
+        '''
+        show_indexes()          Show available indexes in db
+        
+        Parameters:
+            table:              Optinal filter. Show only the indexes for that table
+                                eg "test%"
+                                
+        Retuns:                 An Array of dicts containing the table_info for each table found
+        '''
+        return self._lookup_inventory('index', table)
+    
+
+
     def select(self, query):
         '''
         select()        select statment

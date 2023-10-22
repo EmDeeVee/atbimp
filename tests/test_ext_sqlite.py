@@ -41,6 +41,7 @@ def sqlite_create_test_model(ord=0):
     ''' Helper function: Create a test table dict'''
     if ord == 0:
         ord = ""
+
     model={
         'name':     f"test{ord}", 
         'fields':   [
@@ -93,6 +94,10 @@ def sqlite_create_10_insert_for_select_clauses():
 # ===============================================================
 # Test Functions
 # ===============================================================
+
+# ---------------------------------------------------------------
+# Fixtures
+#
 @pytest.fixture
 def TestApp(request: pytest.FixtureRequest):
     argv = request.node.get_closest_marker('argv').args[0]
@@ -102,6 +107,9 @@ def TestApp(request: pytest.FixtureRequest):
         yield app
         sqlite_cleanup(app)
 
+# ---------------------------------------------------------------
+# Connection
+#
 @pytest.mark.argv(['--debug'])
 def test_ext_sqlite(TestApp: AtbImpAppTest):
     # test that sqlite extension is functional
@@ -113,8 +121,11 @@ def test_ext_sqlite_connect(TestApp: AtbImpAppTest):
     # test that sqlite is creating a database file and closes it
     assert os.path.exists(TestApp.sqlite3.get_dbfile())
 
+# ---------------------------------------------------------------
+# Inventory.  model, index , view ...
+#
 @pytest.mark.argv(['--debug'])
-def test_ext_sqlite__get_model_info(TestApp: AtbImpAppTest):
+def test_ext_sqlite_get_model_info(TestApp: AtbImpAppTest):
     # test that the _get_table_info works properly
         model = sqlite_create_test_model()
         res = TestApp.sqlite3.create_model(model)
@@ -169,6 +180,53 @@ def test_ext_sqlite_show_models_test_filter(TestApp: AtbImpAppTest):
     assert ret[2]['name'] == 'test3'
 
 @pytest.mark.argv(['--debug'])
+def test_ext_sqlite_create_index_as_string(TestApp: AtbImpAppTest):
+    # test the create_index command
+    TestApp.sqlite3.create_model(sqlite_create_test_model())
+    ret = TestApp.sqlite3.create_index('test_idx ON test(id,date)')
+    assert ret
+
+@pytest.mark.argv(['--debug'])
+def test_ext_sqlite_create_index_as_dict(TestApp: AtbImpAppTest):
+    # test the create_index command
+    TestApp.sqlite3.create_model(sqlite_create_test_model())
+    ret = TestApp.sqlite3.create_index({'index': 'test_idx', 'model': 'test', 'fields': 'id,date'})
+    assert ret
+
+
+@pytest.mark.argv(['--debug'])
+def test_ext_sqlite_show_index_no_index(TestApp: AtbImpAppTest):
+    # test show_indexes with no existing indexes
+    TestApp.sqlite3.create_model(sqlite_create_test_model())
+    ret = TestApp.sqlite3.show_indexes()
+    assert len(ret) == 0
+
+@pytest.mark.argv(['--debug'])
+def test_ext_sqlite_show_indexes(TestApp: AtbImpAppTest):
+    # test show_indexes with existing indexes
+    TestApp.sqlite3.create_model(sqlite_create_test_model())
+    TestApp.sqlite3.create_index({'index': 'test_idx', 'model': 'test', 'fields': 'id,date'})
+    ret = TestApp.sqlite3.show_indexes()
+    assert len(ret) == 1
+
+@pytest.mark.argv(['--debug'])
+def test_ext_sqlite_show_indexes_on_table(TestApp: AtbImpAppTest):
+    # test show_indexes with from one specific table
+
+    # Create two models with 1 idx on 1 and two indices on the next
+    TestApp.sqlite3.create_model(sqlite_create_test_model())
+    TestApp.sqlite3.create_model(sqlite_create_test_model(1))
+    TestApp.sqlite3.create_index({'index': 'test_id_idx', 'model': 'test', 'fields': 'date'})
+    TestApp.sqlite3.create_index({'index': 'test_date_idx', 'model': 'test', 'fields': 'date'})
+    TestApp.sqlite3.create_index({'index': 'test1_id_date_idx', 'model': 'test1', 'fields': 'id,date'})
+    ret = TestApp.sqlite3.show_indexes('test')
+    assert len(ret) == 2
+
+
+# ---------------------------------------------------------------
+# select
+#
+@pytest.mark.argv(['--debug'])
 def test_ext_sqlite_select_foo_as_string(TestApp: AtbImpAppTest):
     # Test basic select command
     ret = TestApp.sqlite3.select("'foo'")
@@ -194,53 +252,6 @@ def test_ext_sqlite_select_count_as_dict(TestApp: AtbImpAppTest):
     TestApp.sqlite3.create_model(sqlite_create_test_model())
     ret = TestApp.sqlite3.select({'query': 'COUNT(id)', 'from': 'test'})
     assert ret[0]['COUNT(id)'] == 0
-
-@pytest.mark.argv(['--debug'])
-def test_ext_sqlite_insert_as_str(TestApp: AtbImpAppTest):
-    # Test insert statment as a string
-    TestApp.sqlite3.create_model(sqlite_create_test_model())
-    rowsAffected = TestApp.sqlite3.insert("INTO test(date, txt, price) VALUES (CURRENT_DATE, 'test', 99.25)")
-    assert rowsAffected == 1
-
-@pytest.mark.argv(['--debug'])
-def test_ext_sqlite_insert_as_str_multiple_rows(TestApp: AtbImpAppTest):
-    # Test insert statment as a string
-    TestApp.sqlite3.create_model(sqlite_create_test_model())
-    rowsAffected = TestApp.sqlite3.insert("INTO test(date, txt, price) VALUES (CURRENT_DATE, 'bannana', 1.25),(CURRENT_DATE, 'pear', 4.25),(CURRENT_DATE, 'apple', 99.25)")
-    assert rowsAffected == 3
-
-@pytest.mark.argv(['--debug'])
-def test_ext_sqlite_insert_as_dict(TestApp: AtbImpAppTest):
-    # Test insert statment as a dict with single value
-    TestApp.sqlite3.create_model(sqlite_create_test_model())
-    rowsAffected = TestApp.sqlite3.insert(sqlite_create_insert_dict('test'))
-    assert rowsAffected == 1
-
-@pytest.mark.argv(['--debug'])
-def test_ext_sqlite_insert_as_dict_with_data(TestApp: AtbImpAppTest):
-    # Test insert statment as a dict with single value
-    TestApp.sqlite3.create_model(sqlite_create_test_model())
-    rowsAffected = TestApp.sqlite3.insert(sqlite_create_insert_dict('test', True))
-    assert rowsAffected == 1
-
-@pytest.mark.argv(['--debug'])
-def test_ext_sqlite_insert_multiple_as_dict_with_empty_value(TestApp: AtbImpAppTest):
-    # Test insert statment as a dict with multiple values and 
-    # a trailing comma implying an empty value tuple
-    TestApp.sqlite3.create_model(sqlite_create_test_model())
-    ins = {
-        'into': 'test',
-        'cols': ('date', 'txt', 'price'),
-        'values': [
-            ('#CURRENT_DATE', 'banana', 3.25),
-            ('#CURRENT_DATE', 'apple', 2349.95),
-            ('#CURRENT_DATE', 'pear', 47.505),
-            ('#CURRENT_DATE', 'raspberry', 25),         # Our false trailing comma
-        ]
-    }
-    rowsAffected = TestApp.sqlite3.insert(ins)
-    assert rowsAffected == 4
-
 
 @pytest.mark.argv(['--debug'])
 def test_ext_sqlite_select_from_multiple_tables_as_string(TestApp: AtbImpAppTest):
@@ -317,11 +328,54 @@ def test_sqlite_ext_select_with_clauses_dict(TestApp: AtbImpAppTest):
     res = TestApp.sqlite3.select(qry)
     assert len(res) == 3
 
+# ---------------------------------------------------------------
+# Insert
+#
 @pytest.mark.argv(['--debug'])
-def test_ext_sqlite_create_index_as_string(TestApp: AtbImpAppTest):
-    # test the create_index command
+def test_ext_sqlite_insert_as_str(TestApp: AtbImpAppTest):
+    # Test insert statment as a string
     TestApp.sqlite3.create_model(sqlite_create_test_model())
-    ret = TestApp.sqlite3.create_index('test_idx ON test(id,date)')
-    assert ret
+    rowsAffected = TestApp.sqlite3.insert("INTO test(date, txt, price) VALUES (CURRENT_DATE, 'test', 99.25)")
+    assert rowsAffected == 1
+
+@pytest.mark.argv(['--debug'])
+def test_ext_sqlite_insert_as_str_multiple_rows(TestApp: AtbImpAppTest):
+    # Test insert statment as a string
+    TestApp.sqlite3.create_model(sqlite_create_test_model())
+    rowsAffected = TestApp.sqlite3.insert("INTO test(date, txt, price) VALUES (CURRENT_DATE, 'bannana', 1.25),(CURRENT_DATE, 'pear', 4.25),(CURRENT_DATE, 'apple', 99.25)")
+    assert rowsAffected == 3
+
+@pytest.mark.argv(['--debug'])
+def test_ext_sqlite_insert_as_dict(TestApp: AtbImpAppTest):
+    # Test insert statment as a dict with single value
+    TestApp.sqlite3.create_model(sqlite_create_test_model())
+    rowsAffected = TestApp.sqlite3.insert(sqlite_create_insert_dict('test'))
+    assert rowsAffected == 1
+
+@pytest.mark.argv(['--debug'])
+def test_ext_sqlite_insert_as_dict_with_data(TestApp: AtbImpAppTest):
+    # Test insert statment as a dict with single value
+    TestApp.sqlite3.create_model(sqlite_create_test_model())
+    rowsAffected = TestApp.sqlite3.insert(sqlite_create_insert_dict('test', True))
+    assert rowsAffected == 1
+
+@pytest.mark.argv(['--debug'])
+def test_ext_sqlite_insert_multiple_as_dict_with_empty_value(TestApp: AtbImpAppTest):
+    # Test insert statment as a dict with multiple values and 
+    # a trailing comma implying an empty value tuple
+    TestApp.sqlite3.create_model(sqlite_create_test_model())
+    ins = {
+        'into': 'test',
+        'cols': ('date', 'txt', 'price'),
+        'values': [
+            ('#CURRENT_DATE', 'banana', 3.25),
+            ('#CURRENT_DATE', 'apple', 2349.95),
+            ('#CURRENT_DATE', 'pear', 47.505),
+            ('#CURRENT_DATE', 'raspberry', 25),         # Our false trailing comma
+        ]
+    }
+    rowsAffected = TestApp.sqlite3.insert(ins)
+    assert rowsAffected == 4
+
 
 
