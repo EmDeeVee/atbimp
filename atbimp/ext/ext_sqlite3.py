@@ -79,6 +79,14 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
                 model = app.sqlite3._check_or_create_app_model(modelName)        
                 app.sqlite3.models.update({f"{modelName}": model[0]})
 
+        # Let's see if cement user want's us to create indexes
+        #
+        if hasattr(app, 'indexes') and app.indexes:
+            indexes = app.config.get('db.sqlite3', 'indexes')
+            for index in indexes:
+                app.sqlite3.create_index(index)
+
+
 
 
     # ========================================================================

@@ -73,6 +73,25 @@ CONFIG['db.sqlite3']['imports'] = [
     "'source' TEXT"
 ]
 
+# db.duplicates.table
+#
+# basically the same layout as the cvs file, with as extras
+# the id and the foreign_key for the import log
+#
+CONFIG['db.sqlite3']['duplicates'] = [
+    "'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
+    "'import_id' INTEGER",      # The link with the imports table
+    "'date' TEXT",                    
+    "'account_rtn' TEXT",             
+    "'account_number' TEXT",          
+    "'transaction_type' TEXT",        
+    "'customer_ref_number' TEXT",     
+    "'debit_amount' TEXT",            
+    "'credit_amount' TEXT",           
+    "'running_balance_amount' TEXT",  
+    "'extended_text' TEXT",           
+    "'bank_reference_number' TEXT"    
+]
 
 # db.transactions.table:
 #
@@ -89,6 +108,19 @@ CONFIG['db.sqlite3']['transactions'] = [
     "'balance' REAL",           # running balance
     "'description' TEXT",
     "'bank_reference' TEXT"
+]
+
+# db.transactions.indexes
+# 
+# a list of indexes to create.  Set app.indexes to true in order to 
+# automatically create them
+#
+CONFIG['db.sqlite3']['indexes'] = [
+    {
+        'index':    'trans_idx',
+        'model':    'transactions',
+        'fields':   'date,amount,balance'
+    }
 ]
 
 
@@ -142,8 +174,11 @@ class AtbImpApp(App):
         'months',
         'transactions',
         'accounts',
-        'imports'
+        'imports',
+        'duplicates'
     ]
+
+    indexes = True
 
     # Error codes.  We don't know what exit codes cement uses
     # so lets start ours at 128
@@ -161,6 +196,7 @@ class AtbImpAppTest(TestApp,AtbImpApp):
 
     # Override models, so we don't automatically create tehm
     models = []
+    indexes = False
 
 
 def main():

@@ -44,7 +44,8 @@ def TestAppDb(request):
             'months',
             'transactions',
             'accounts',
-            'imports'
+            'imports',
+            'duplicates'
         ]
         app.run()
         yield app
