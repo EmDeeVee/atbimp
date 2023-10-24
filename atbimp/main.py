@@ -130,7 +130,7 @@ CONFIG['db.sqlite3']['indexes'] = [
     {
         'index':    'trans_idx',
         'model':    'transactions',
-        'fields':   'account_id,date,amount,balance'
+        'fields':   'account_id,date,amount,dc,balance'
     }
 ]
 

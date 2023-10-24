@@ -253,7 +253,7 @@ class Csv(Controller):
     @ex(hide=True)
     def _check_duplicate(self, data):
         # Build a query to see if this transaction is already in the database.
-        where = f"account_id = {data['account_id']} AND date ='{data['date']}' AND amount={data['amount']} AND balance={data['balance']}"
+        where = f"account_id = {data['account_id']} AND date ='{data['date']}' AND amount={data['amount']} AND dc='{data['dc']}' AND balance={data['balance']}"
         qry={
             'query':    'id',
             'from':     'transactions',
