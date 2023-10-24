@@ -75,23 +75,34 @@ CONFIG['db.sqlite3']['imports'] = [
 
 # db.duplicates.table
 #
-# basically the same layout as the cvs file, with as extras
-# the id and the foreign_key for the import log
+# Link between the duplicate entries and original transactions found
 #
 CONFIG['db.sqlite3']['duplicates'] = [
     "'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
-    "'import_id' INTEGER",      # The link with the imports table
-    "'date' TEXT",                    
-    "'account_rtn' TEXT",             
-    "'account_number' TEXT",          
-    "'transaction_type' TEXT",        
-    "'customer_ref_number' TEXT",     
-    "'debit_amount' TEXT",            
-    "'credit_amount' TEXT",           
-    "'running_balance_amount' TEXT",  
-    "'extended_text' TEXT",           
-    "'bank_reference_number' TEXT"    
+    "'transaction_id' INTEGER",      # The link with the transactions table
 ]
+
+# db.dup_entries.table
+#
+# basically the same layout as the cvs file, with as extras
+# the id and the foreign_key for the import log and duplicates
+#
+CONFIG['db.sqlite3']['dup_entries'] = [
+    "'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
+    "'duplicate_id' INTEGER",     # The link with the dublink table
+    "'account_id' INTEGER",    # The link with the accounts table
+    "'month_id' INTEGER",      # The link to months table
+    "'import_id' INTEGER",      # The link with the imports table
+    "'date' TEXT",
+    "'transaction_type' TEXT",
+    "'customer_ref_number' TEXT",
+    "'amount' REAL",
+    "'dc' TEXT",                # is the amount Debit or Credit (D/C)
+    "'balance' REAL",           # running balance
+    "'description' TEXT",
+    "'bank_reference' TEXT"
+]
+
 
 # db.transactions.table:
 #
@@ -119,7 +130,7 @@ CONFIG['db.sqlite3']['indexes'] = [
     {
         'index':    'trans_idx',
         'model':    'transactions',
-        'fields':   'date,amount,balance'
+        'fields':   'account_id,date,amount,balance'
     }
 ]
 
@@ -175,7 +186,8 @@ class AtbImpApp(App):
         'transactions',
         'accounts',
         'imports',
-        'duplicates'
+        'duplicates',
+        'dup_entries'
     ]
 
     indexes = True

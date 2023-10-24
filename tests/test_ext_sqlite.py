@@ -193,6 +193,15 @@ def test_ext_sqlite_create_index_as_dict(TestApp: AtbImpAppTest):
     ret = TestApp.sqlite3.create_index({'index': 'test_idx', 'model': 'test', 'fields': 'id,date'})
     assert ret
 
+@pytest.mark.argv(['--debug'])
+def test_ext_sqlite_create_index_that_that_exists(TestApp: AtbImpAppTest):
+    # test the create_index command
+    TestApp.sqlite3.create_model(sqlite_create_test_model())
+    ret = TestApp.sqlite3.create_index({'index': 'test_idx', 'model': 'test', 'fields': 'id,date'})
+    # Create the same index for the second time but now with ifnotexists=True
+    ret = TestApp.sqlite3.create_index({'index': 'test_idx', 'model': 'test', 'fields': 'id,date', 'ifnotexists': True})
+    assert ret
+
 
 @pytest.mark.argv(['--debug'])
 def test_ext_sqlite_show_index_no_index(TestApp: AtbImpAppTest):

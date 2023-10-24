@@ -39,6 +39,7 @@ class Csv(Controller):
             "recordsImported":   0,       # Total number of records imported.
             "recordsExported":   0,       # Total number of records exported.
             "sqlInsertErrors":   0,       # Total number of Sql Insert Errorrs.
+            "duplicatesFound":   0,       # Total number of duplicates found.
         }
         # date format order used in this file.  We will regocnize the following formats.
         #   YYYY-MM-DD:     dateOrder will be [1,2,3]   # The format we want.
@@ -237,12 +238,59 @@ class Csv(Controller):
             return None
 
         return reader
+    
 
+    # ----------------------------------------------------------------------
+    # _check_duplicate(): -> bool
+    #
+    # Check to see if this is a duplicate, if so import this into the 
+    # duplicates table.
+    #
+    #  Return:
+    #       True: Yes it was a duplicate
+    #       False: No duplicate, please continue
+    #
+    @ex(hide=True)
+    def _check_duplicate(self, data):
+        # Build a query to see if this transaction is already in the database.
+        where = f"account_id = {data['account_id']} AND date ='{data['date']}' AND amount={data['amount']} AND balance={data['balance']}"
+        qry={
+            'query':    'id',
+            'from':     'transactions',
+            'where':    where
+        }
+        res = self.app.sqlite3.select(qry)
+        if len(res) != 0:
+            # Houston, we have a duplicate
+            transaction_id = res[0]['id']
+
+            # Let's see if this is a first or not
+            res = self.app.sqlite3.select({'query': 'id', 'from': 'duplicates', 'where': f'transaction_id={transaction_id}'})
+            if len(res) == 0:
+                # first time
+                if not self.app.sqlite3.insert({'into': 'duplicates', 'data': {'transaction_id': transaction_id }}):
+                    raise ConnectionError
+                duplicate_id = self.app.sqlite3._cur.lastrowid
+            else:
+                # not a first
+                duplicate_id = res[0]['id']
+
+            
+            data.update({'duplicate_id': duplicate_id})
+            if not self.app.sqlite3.insert({'into': 'dup_entries', 'data': data}):
+                raise ConnectionError
+            
+            return True
+            
+        return False       # The default, False means check_duplicate is negative
+    
+    
     # ----------------------------------------------------------------------
     # _import_transaction():  Import transaction into database
     #
     @ex(hide=True)
     def _import_transaction(self, row, importRowId):
+
         # Make a dict of our row
         dataIn = dict(zip(self.app.config.get(self.app.label,'exp_tbl_cols'),row))
 
@@ -272,15 +320,13 @@ class Csv(Controller):
         # transactions
 
         # We don't want Debit and credit in a seperate cols
-        if len(row[5]):
-            # debit
-            amt = row[5]; dc = "D"
-        else:
-            # credit
-            amt = row[6]; dc = "C"
+        amt = dataIn['debit_amount']; dc="D"
+        if len(dataIn['credit_amount']):
+            amt = dataIn['credit_amount']; dc="C"
 
         datTrans = dict(zip(
-            list(self.app.sqlite3.models['transactions']['fields'])[4:],  # Skip id, account_id, month_id and import_id for now
+            # Skip id, account_id, month_id and import_id for now
+            list(self.app.sqlite3.models['transactions']['fields'])[4:],  
             (
                 dataIn['date'],
                 dataIn['transaction_type'],
@@ -293,7 +339,7 @@ class Csv(Controller):
             )
         ))
 
-        # Our data objects are ready
+        # Our data objects are almost ready
         # First the accounts table
         qry={'query': 'id, alias', 'from': 'accounts', 'where': f"alias LIKE '{dataAcct['alias']}'"}
         ret = self.app.sqlite3.select(qry)
@@ -330,18 +376,22 @@ class Csv(Controller):
         # Only interested in the first row answer of this query
         ret=ret[0]
 
-        # We now have an id for our dataTrans object
+        # completing the datTrans object values
         datTrans['month_id'] = ret['id']
-                
-
-        # We should be good to insert
         datTrans['import_id'] = importRowId
-    
-        if self.app.sqlite3.insert({'into': 'transactions', 'data': datTrans}) == 1:
-            return True
+
+        # Before importing this row, check for duplicate.
+        if not self._check_duplicate(datTrans):
+            # All good, lets import
+            if self.app.sqlite3.insert({'into': 'transactions', 'data': datTrans}) == 1:
+                return True
+        else:
+            # not good, duplicate was inserted into duplicates table
+            self.chkreport['duplicatesFound'] += 1
+            self.chkreport['recordsImported'] -= 1  #  This one doesn't count
 
         # That's all there is to it.
-        return False
+        return True
             
 
 
@@ -402,7 +452,6 @@ class Csv(Controller):
                     self.chkreport["recordsImported"]+=1
                 else:
                     self.chkreport["sqlInsertErrors"]+=1
-
 
                 row = reader.readline(); self.chkreport["linesRead"]+=1
 

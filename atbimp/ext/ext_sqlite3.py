@@ -84,6 +84,7 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         if hasattr(app, 'indexes') and app.indexes:
             indexes = app.config.get('db.sqlite3', 'indexes')
             for index in indexes:
+                index.update({'ifnotexists': True})
                 app.sqlite3.create_index(index)
 
 
@@ -374,7 +375,7 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         elif type(index) == dict:
             if 'unique' in index:
                 bUnique = index['unique']
-            if 'ifnotexists' in 'index':
+            if 'ifnotexists' in index:
                 bIfNotEists = index['ifnotexists']
         else:
             raise ValueError

@@ -45,10 +45,16 @@ def TestAppDb(request):
             'transactions',
             'accounts',
             'imports',
-            'duplicates'
+            'duplicates',
+            'dup_entries'
         ]
         app.run()
         yield app
+
+        dbfile = app.sqlite3.get_dbfile()
+        if os.path.exists(dbfile):
+            os.remove(dbfile)
+
 
 
 
@@ -232,8 +238,21 @@ def test_atbimp_csv_imp_mixed(TestAppDb):
     assert report['trailingComma'] == 5
     assert report['totalErrors'] == 14
 
+@pytest.mark.argv(['csv', 'imp', './tests/duplicates_with_header.tcsv'])
+def test_atbimp_csv_imp_duplicates(TestAppDb):
+    # Try importing our test file mixed.tcsv
+    # TODO: Need another test database file
+    report = get_chkreport(TestAppDb)
+    assert TestAppDb.exit_code == 0 
+    assert report['linesRead'] == 9
+    assert report['dataLinesFound'] == 8
+    assert report['incorrectDate'] == 8
+    assert report['duplicatesFound'] == 3
+    assert report['recordsImported'] == 5
+    assert report['totalErrors'] == 8
+
     # Last test.   Cleanup our db
-    dbfile = TestAppDb.sqlite3.get_dbfile()
-    if os.path.exists(dbfile):
-        os.remove(dbfile)
+    # dbfile = TestAppDb.sqlite3.get_dbfile()
+    # if os.path.exists(dbfile):
+    #     os.remove(dbfile)
 
