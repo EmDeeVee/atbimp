@@ -33,7 +33,7 @@ class Duplicates(Controller):
     # import: import is a keyword that cannot be used as a method name  
     #
     @ex(
-            help='list all duplicates found.',
+            help="list all duplicates found.",
             aliases=['list']
     )
     def ls(self):

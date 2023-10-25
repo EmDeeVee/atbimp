@@ -15,12 +15,7 @@ class Csv(Controller):
     '''
     class Meta:
         label = 'csv'
-        help = """
-                Commands for working ATB csv files. After a (sanity)check the
-                requested csv file is imported into the temp table imports. Once
-                you isue the 'csv merge' command the contents of the imports table
-                will be merged into the transactions table
-            """
+        help = "Commands for working ATB csv files."
         stacked_type = 'nested'
         stacked_on = 'base'
     
@@ -414,9 +409,9 @@ class Csv(Controller):
             )]) 
     def imp(self):
         '''
-        imp | import <csv_file>    import and check csv_file into the import table of the
-                                    transactions.db3 database.  The current contents of the 
-                                    import table will be zapped.
+        imp | import <csv_file>     import and check csv_file into the transactions table of the
+                                    database.  Any suspected duplicates will be stored in seperate
+                                    tables for user review.
 
         '''
         # Scan our input file to see what date format we need to use.
