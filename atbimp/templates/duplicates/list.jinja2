@@ -1,0 +1,13 @@
+****************************************************************
+                 List of Duplicates
+****************************************************************
+{% for dup in duplicates %}
+{{"\033[32;1m"}}[{{dup.entry.id}}]: → → {{dup.entry.date}} {{"%-15s"|format(dup.entry.transaction_type)}} {{"%-45s"|format(dup.entry.description[:45])}} {{"%8.2f"|format(dup.entry.amount)}}:{{dup.entry.dc}} {{"%8.2f"|format(dup.entry.balance)}}:B{{"\033[0m"}}
+ ▫︎ Entry on account: {{dup.entry.acct_number}}({{dup.entry.alias}}) with nickname: {{dup.entry.nick_name}}
+ ▫︎ imported on: {{dup.entry.import_time}} from line({{dup.entry.import_line}}) of {{dup.entry.import_source}}
+{% for de in dup.duplicates %}
+ ↳{{"\033[31m"}}({{de.id}}): → {{de.date}} {{"%-15s"|format(de.transaction_type)}} {{"%-45s"|format(de.description[:45])}} {{"%8.2f"|format(de.amount)}}:{{de.dc}} {{"%8.2f"|format(de.balance)}}:B{{"\033[0m"}}
+ ▫︎ Duplicate on account {{de.acct_number}}({{de.alias}}) with nickname: {{de.nick_name}}
+ ▫︎ imported on {{de.import_time}} from line({{de.import_line}}) of {{de.import_source}}
+{% endfor %}
+{% endfor %}

@@ -1,4 +1,4 @@
-import os
+import os, sqlite3
 import pytest
 from atbimp.main import AtbImpAppTest
 
@@ -48,12 +48,66 @@ def TestAppDb(request):
             'duplicates',
             'dup_entries'
         ]
+        app.indexes = True
+        app.dbviews = True
+
+    
         app.run()
         yield app
 
         dbfile = app.sqlite3.get_dbfile()
         if os.path.exists(dbfile):
             os.remove(dbfile)
+
+@pytest.fixture
+def TestAppDuplicates(request):
+    # A testapp that runs on duplicates.db3.  We have to pre-populate
+    # this database with data, so we can use this as a fixture for our
+    # tests.
+    #
+    con=sqlite3.connect('./tests/duplicates.db3')
+    cur=con.cursor()
+    with open('./tests/duplicates.db3.sql') as inp:
+        sql=inp.read()
+        inp.close()
+
+    cur.executescript(sql)
+    con.commit()
+    con.close()
+
+    # Now we can setup our app
+    #
+
+    argv = request.node.get_closest_marker('argv').args[0]
+    with AtbImpAppTest(argv=argv) as app:
+        # In this case we need the models that belong to 
+        # our appliction. We dit create all the models and 
+        # views already using our sql script above, howerver
+        # this way they will be automatically connected to 
+        # the app.sqlite3 object.
+        #
+        app.models = [
+            'months',
+            'transactions',
+            'accounts',
+            'imports',
+            'duplicates',
+            'dup_entries'
+        ]
+        app.indexes = True
+        app.dbviews = True
+
+        # override the db file
+        os.environ['ATBIMP_DB_FILE'] = './tests/duplicates.db3'
+
+        app.run()
+        yield app
+
+        dbfile=app.sqlite3.get_dbfile()
+        if os.path.exists(dbfile):
+            os.remove(dbfile)
+        os.unsetenv('ATBIMP_DB_FILE')
+
 
 
 
@@ -251,8 +305,7 @@ def test_atbimp_csv_imp_duplicates(TestAppDb):
     assert report['recordsImported'] == 5
     assert report['totalErrors'] == 8
 
-    # Last test.   Cleanup our db
-    # dbfile = TestAppDb.sqlite3.get_dbfile()
-    # if os.path.exists(dbfile):
-    #     os.remove(dbfile)
-
+@pytest.mark.argv(['dup', 'ls'])
+def test_atbimp_dup_ls(TestAppDuplicates):
+    # List all duplicates found
+    assert TestAppDuplicates.exit_code == 0

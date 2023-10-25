@@ -6,6 +6,7 @@ from cement.utils import fs
 from .core.exc import AtbImpAppError
 from .controllers.base import Base
 from .controllers.csv import Csv
+from .controllers.duplicates import Duplicates
 
 # configuration defaults
 #
@@ -89,10 +90,11 @@ CONFIG['db.sqlite3']['duplicates'] = [
 #
 CONFIG['db.sqlite3']['dup_entries'] = [
     "'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
-    "'duplicate_id' INTEGER",     # The link with the dublink table
-    "'account_id' INTEGER",    # The link with the accounts table
-    "'month_id' INTEGER",      # The link to months table
-    "'import_id' INTEGER",      # The link with the imports table
+    "'duplicate_id' INTEGER",       # The link with the dublink table
+    "'account_id' INTEGER",         # The link with the accounts table
+    "'month_id' INTEGER",           # The link to months table
+    "'import_id' INTEGER",          # The link with the imports table
+    "'import_line' INTEGER",        # The line number in the import file
     "'date' TEXT",
     "'transaction_type' TEXT",
     "'customer_ref_number' TEXT",
@@ -110,7 +112,8 @@ CONFIG['db.sqlite3']['transactions'] = [
     "'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
     "'account_id' INTEGER",    # The link with the accounts table
     "'month_id' INTEGER",      # The link to months table
-    "'import_id' INTEGER",      # The link with the imports table
+    "'import_id' INTEGER",     # The link with the imports table
+    "'import_line' INTEGER",    # The line number in the import file
     "'date' TEXT",
     "'transaction_type' TEXT",
     "'customer_ref_number' TEXT",
@@ -123,7 +126,7 @@ CONFIG['db.sqlite3']['transactions'] = [
 
 # db.transactions.indexes
 # 
-# a list of indexes to create.  Set app.indexes to true in order to 
+# a list of indexes to create.  Set app.indexes to True in order to 
 # automatically create them
 #
 CONFIG['db.sqlite3']['indexes'] = [
@@ -134,6 +137,45 @@ CONFIG['db.sqlite3']['indexes'] = [
     }
 ]
 
+# db.transactions.views
+#
+# a list of views to create. Set app.dbviews to True in order to 
+# automatically create them
+#
+CONFIG['db.sqlite3']['dbviews'] = [
+    {
+        'name': 'list_duplicates',
+        'sql': '''
+            CREATE VIEW  IF NOT EXISTS 'list_duplicates'  AS
+                SELECT 
+                    d.id,t.id as 'transaction_id',t.date,a.alias,a.nick_name,a.acct_number,t.transaction_type,t.customer_ref_number,
+                    t.amount,t.dc,t.balance,t.description,
+                    datetime(i.time_stamp, 'localtime') as 'import_time', i.source as 'import_source', t.import_line
+                FROM transactions t
+                    INNER JOIN duplicates d ON d.transaction_id = t.id  
+                    INNER JOIN accounts a ON t.account_id = a.id
+                    INNER JOIN imports i ON t.import_id = i.id
+                WHERE
+                    t.id IN (SELECT transaction_id FROM duplicates)
+            ;
+        '''
+    },
+    {
+        'name': 'list_dup_entries',
+        'sql': '''
+            CREATE VIEW  IF NOT EXISTS 'list_dup_entries'  AS
+            SELECT
+                e.id,d.id as 'duplicate_id',e.date,a.alias, a.acct_number,a.nick_name,e.transaction_type,e.customer_ref_number,
+                e.amount,e.dc,e.balance,e.description,
+                datetime(i.time_stamp, 'localtime') as 'import_time', i.source as 'import_source', e.import_line
+            FROM dup_entries e
+                INNER JOIN duplicates d ON e.duplicate_id = d.id
+                INNER JOIN accounts a ON e.account_id = a.id
+                INNER JOIN imports i ON e.import_id = i.id
+            ;
+        '''
+    }
+]
 
 class AtbImpApp(App):
     """ATB CSV Import and List Application primary application."""
@@ -171,6 +213,7 @@ class AtbImpApp(App):
         handlers = [
             Base,
             Csv,
+            Duplicates
         ]
 
         # hooks
@@ -191,6 +234,7 @@ class AtbImpApp(App):
     ]
 
     indexes = True
+    dbviews = True
 
     # Error codes.  We don't know what exit codes cement uses
     # so lets start ours at 128
@@ -209,6 +253,7 @@ class AtbImpAppTest(TestApp,AtbImpApp):
     # Override models, so we don't automatically create tehm
     models = []
     indexes = False
+    dbviews = False
 
 
 def main():

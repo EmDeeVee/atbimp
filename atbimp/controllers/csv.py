@@ -12,14 +12,15 @@ class Csv(Controller):
     accesed by: atbimp csv <command>
 
     parameters: None
-        '''
+    '''
     class Meta:
         label = 'csv'
-        help = """Commands for working ATB csv files. After a (sanity)check the
+        help = """
+                Commands for working ATB csv files. After a (sanity)check the
                 requested csv file is imported into the temp table imports. Once
                 you isue the 'csv merge' command the contents of the imports table
                 will be merged into the transactions table
-                """
+            """
         stacked_type = 'nested'
         stacked_on = 'base'
     
@@ -54,7 +55,6 @@ class Csv(Controller):
     ## ====================================================================
     ## Helper Functions
     ##
-
 
     # ----------------------------------------------------------------------
     # _scan_date_format()
@@ -325,8 +325,8 @@ class Csv(Controller):
             amt = dataIn['credit_amount']; dc="C"
 
         datTrans = dict(zip(
-            # Skip id, account_id, month_id and import_id for now
-            list(self.app.sqlite3.models['transactions']['fields'])[4:],  
+            # Skip id, account_id, month_id, import_id and import_line for now
+            list(self.app.sqlite3.models['transactions']['fields'])[5:],  
             (
                 dataIn['date'],
                 dataIn['transaction_type'],
@@ -379,6 +379,7 @@ class Csv(Controller):
         # completing the datTrans object values
         datTrans['month_id'] = ret['id']
         datTrans['import_id'] = importRowId
+        datTrans['import_line'] = self.chkreport['linesRead']
 
         # Before importing this row, check for duplicate.
         if not self._check_duplicate(datTrans):

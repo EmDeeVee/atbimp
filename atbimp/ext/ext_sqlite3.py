@@ -87,12 +87,30 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
                 index.update({'ifnotexists': True})
                 app.sqlite3.create_index(index)
 
-
+        # Let's see if cement user want's us to create views
+        if hasattr(app, 'dbviews') and app.dbviews:
+            dbviews = app.config.get('db.sqlite3', 'dbviews')
+            for dbview in dbviews:
+                dbview.update({'ifnotexists': True})
+                app.sqlite3.create_view(dbview)
 
 
     # ========================================================================
     # Helper Functions
     # ========================================================================
+
+    # _trim_sql(stmt);
+    # 
+    # Trim a raw sql statement.  Remove newlines and exesive space
+    #
+    def _trim_sql(self,stmt):
+        lRet=stmt.split('\n')
+        lRet=[line.strip() for line in lRet]
+        ret = ' '.join(lRet).strip()
+
+        return ret
+
+
 
     def _check_or_create_app_model(self, modelName):
         model = self.show_models(modelName)
@@ -419,6 +437,39 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         '''
         return self._lookup_inventory('index', table)
     
+
+    def create_view(self, dbView):
+        # TODO: Write test and make more enable the accepting a dict to create
+
+        # do some basic sanity checking on the dict
+        # FIXME: assume dbView as dict for now
+        if len(dbView) < 1:
+            if (len(dbView['name']) < 1) and (len(dbView['fields']) < 1):
+                # We should have a KeyError exeption by now
+                return None
+            
+        if 'ifnotexists' in dbView:
+            bIfNotEists = dbView['ifnotexists']
+
+        ifnotexists = ''
+        if bIfNotEists:
+            ifnotexists = 'IF NOT EXISTS'
+
+
+        # Create our statment.
+        # FIXME: asume dbView.sql has it all
+        if 'sql' in dbView:
+            stmt = self._trim_sql(dbView['sql'])
+            # execute our statment
+            try:
+                self._cur.execute(stmt)
+                self._con.commit()
+            except:
+                raise ConnectionError
+        
+        return True
+
+
 
 
     def select(self, query):
