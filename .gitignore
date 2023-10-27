@@ -115,3 +115,4 @@ data/
 **.*~
 **.DS_Store
 transactions.db3
+tests/twomonths.db3.sql

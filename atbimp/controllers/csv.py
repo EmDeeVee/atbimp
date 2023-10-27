@@ -15,7 +15,7 @@ class Csv(Controller):
     '''
     class Meta:
         label = 'csv'
-        help = "Commands for working ATB csv files."
+        help = "Commands for checking, importing and fixing ATB csv files."
         stacked_type = 'nested'
         stacked_on = 'base'
     
@@ -555,7 +555,7 @@ class Csv(Controller):
             if not writer.open(exp_file):
                 self.app.log.error(f'Error opening export file: {exp_file}')
                 self.app.exit_code = self.app.EC_FILE_NOT_FOUND
-                return self.app.EC_FILE_NOT_FOUND
+                return
             self.chkreport["fileExported"] = exp_file
             
             # Read the first line

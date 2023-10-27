@@ -14,7 +14,17 @@ class Base(Controller):
         label = 'base'
 
         # text displayed at the top of --help output
-        description = 'Will allow you to import ATB csv files and list transactions'
+        description = '''
+    Will allow you to import ATB csv files and list transactions
+
+    1) Check, fix and import your csv files using the 'csv' sub commands'
+    2) Optionally you can assign nick-names to the accounts imported using 
+       'data accounts' commands.
+    3) After import check for duplicates or false positives and decide to 
+       import them after all, or mark as duplicate and remove.
+    4) display months, date ranges or find a specific amount or part of the
+       description using the csv data commands.
+'''
 
         # text displayed at the bottom of --help output
         epilog = ''

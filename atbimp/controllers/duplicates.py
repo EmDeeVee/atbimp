@@ -3,17 +3,19 @@ from cement import Controller, ex
 @ex(help='Display and fix duplicates')
 class Duplicates(Controller):
     '''
-    Class Duplicates(Controller): controller to handle tuplicates found after cvs import 
-    commands.  Aaccesed by atbimp dup <command>
+    Class Duplicates(Controller): controller to handle duplicates found after cvs import 
+    commands.  
+    
+    Accesed by: atbimp dup <command>
 
-    parameters: None
+    Parameters: None
     '''
     class Meta:
         label = 'duplicates'
         aliases= ['dup']
         help = '''  
                 Commands for working with duplicates found after a successfull 
-                import by the 'csv imp(ort)' command.
+                imported by the 'csv import' command.
             '''
         stacked_type = 'nested'
         stacked_on = 'base'
@@ -65,7 +67,7 @@ class Duplicates(Controller):
         data={}
         data['duplicates'] = duplicates
         self.app.render(data,'./duplicates/list.jinja2')
-        print('+++ End of Duplicates report +++' )
+        print('+++ End of Duplicates list +++' )
             
 
 

@@ -511,7 +511,7 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         elif type(query) == dict:
             # query as dict.  A bit more work
             stmt = f"SELECT {query['query']}"
-            if 'from' in query:
+            if 'from' in query and len(query['from']):
                 # from section
                 if type(query['from']) == str:
                     stmt += f" FROM {query['from']}"
@@ -520,7 +520,7 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
                 else:
                     raise ValueError
                 
-            if 'where' in query:
+            if 'where' in query and len(query['where']):
                 # where section and
                 if type(query['where']) == str:
                     stmt += f" WHERE {query['where']}"
@@ -530,7 +530,8 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
             # Clauses
             if 'clauses' in query:
                 for clause in query['clauses']:
-                    stmt += f" {clause.upper().replace('_', ' ')} {query['clauses'][clause]}"
+                    if len(clause):
+                        stmt += f" {clause.upper().replace('_', ' ')} {query['clauses'][clause]}"
         else:
             raise ValueError
         

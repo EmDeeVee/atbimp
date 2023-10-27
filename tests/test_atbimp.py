@@ -3,6 +3,9 @@ import pytest
 from atbimp.main import AtbImpAppTest
 
 
+## ====================================================================
+## Helper Functions
+##
 def get_chkreport(app):
     '''
         chkreport = {
@@ -19,6 +22,32 @@ def get_chkreport(app):
     '''
     return app.controller._controllers_map['csv'].chkreport
 
+def create_tmpdb(inputFile):
+    dbFile = inputFile[:-4]
+    con=sqlite3.connect(dbFile)
+    cur=con.cursor()
+    with open(inputFile) as inp:
+        sql=inp.read()
+        inp.close()
+
+    cur.executescript(sql)
+    con.commit()
+    con.close()
+
+    # override the db file
+    os.environ['ATBIMP_DB_FILE'] = dbFile
+
+
+def destroy_tmpdb(inputFile):
+    dbfile=inputFile[:-4]
+    if os.path.exists(dbfile):
+        os.remove(dbfile)
+    os.unsetenv('ATBIMP_DB_FILE')
+
+
+## ====================================================================
+## Fixtures
+##
 @pytest.fixture
 def TestAppNoArg():
     with AtbImpAppTest() as app:        
@@ -60,20 +89,12 @@ def TestAppDb(request):
             os.remove(dbfile)
 
 @pytest.fixture
-def TestAppDuplicates(request):
-    # A testapp that runs on duplicates.db3.  We have to pre-populate
+def TestAppDb2Months(request):
+    # A testapp that runs on twomonts.db3.  We have to pre-populate
     # this database with data, so we can use this as a fixture for our
     # tests.
     #
-    con=sqlite3.connect('./tests/duplicates.db3')
-    cur=con.cursor()
-    with open('./tests/duplicates.db3.sql') as inp:
-        sql=inp.read()
-        inp.close()
-
-    cur.executescript(sql)
-    con.commit()
-    con.close()
+    create_tmpdb('./tests/twomonths.db3.sql')
 
     # Now we can setup our app
     #
@@ -97,21 +118,15 @@ def TestAppDuplicates(request):
         app.indexes = True
         app.dbviews = True
 
-        # override the db file
-        os.environ['ATBIMP_DB_FILE'] = './tests/duplicates.db3'
-
         app.run()
         yield app
 
-        dbfile=app.sqlite3.get_dbfile()
-        if os.path.exists(dbfile):
-            os.remove(dbfile)
-        os.unsetenv('ATBIMP_DB_FILE')
+        destroy_tmpdb('./tests/twomonths.db3.sql')
 
 
-
-
-
+## ====================================================================
+## Tests
+##
 def test_atbimp(TestAppNoArg: AtbImpAppTest):
     # test atbimp without any subcommands or arguments
     assert TestAppNoArg.exit_code == 0
@@ -306,6 +321,42 @@ def test_atbimp_csv_imp_duplicates(TestAppDb):
     assert report['totalErrors'] == 8
 
 @pytest.mark.argv(['dup', 'ls'])
-def test_atbimp_dup_ls(TestAppDuplicates):
+def test_atbimp_dup_ls(TestAppDb):
     # List all duplicates found
-    assert TestAppDuplicates.exit_code == 0
+    assert TestAppDb.exit_code == 0
+
+@pytest.mark.argv(['data', 'show'])
+def test_atbimp_data_show(TestAppDb2Months):
+    assert TestAppDb2Months.exit_code == 0
+
+@pytest.mark.argv(['data', 'show', '-m', 'January'])
+def test_atbimp_data_show_faulty_month(TestAppDb2Months):
+    assert TestAppDb2Months.exit_code == TestAppDb2Months.EC_PARAM_WRONG_FORMAT
+
+@pytest.mark.argv(['data', 'show', '-r', '2022/02/02:2022/02/27'])
+def test_atbimp_data_show_faulty_range(TestAppDb2Months):
+    assert TestAppDb2Months.exit_code == TestAppDb2Months.EC_PARAM_WRONG_FORMAT
+
+@pytest.mark.argv(['data', 'show', '-m', '2022-11', '-a', 'NoneExistingAccount'])
+def test_atbimp_data_show_faulty_account(TestAppDb2Months):
+    assert TestAppDb2Months.exit_code == TestAppDb2Months.EC_PARAM_WRONG_FORMAT
+
+@pytest.mark.argv(['data', 'show', '-m', '2022-11', '-a', '1234'])
+def test_atbimp_data_show_month_one_account(TestAppDb2Months):
+    assert TestAppDb2Months.exit_code == 0
+
+@pytest.mark.argv(['data', 'show', '-m', '2022-11', '-a', 'Unlimited'])
+def test_atbimp_data_show_month_one_account_nickname(TestAppDb2Months):
+    assert TestAppDb2Months.exit_code == 0
+
+@pytest.mark.argv(['data', 'show', '-m', '2022-11'])
+def test_atbimp_data_show_month_all_accounts(TestAppDb2Months):
+    assert TestAppDb2Months.exit_code == 0
+
+@pytest.mark.argv(['data', 'show', '-d', '2022-11-10'])
+def test_atbimp_data_show_date_all_accounts(TestAppDb2Months):
+    assert TestAppDb2Months.exit_code == 0
+
+@pytest.mark.argv(['data', 'show', '-d', '2022-11-10', '-a', 'Unlimited'])
+def test_atbimp_data_show_date_one_account(TestAppDb2Months):
+    assert TestAppDb2Months.exit_code == 0

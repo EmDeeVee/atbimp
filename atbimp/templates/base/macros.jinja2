@@ -1,0 +1,73 @@
+{#
+    Macro to use ANSI escape colors
+
+#}
+{%  macro color(colorName) -%}
+{%  if colorName == 'blue' -%}
+{{-     "\033[34m" -}}
+{%- elif colorName == 'red' -%}
+{{-     "\033[31m" -}}
+{%- elif colorName == 'green' -%}
+{{-     "\033[32m" -}}
+{%- elif colorName == 'off' -%}
+{{-     "\033[0m" -}}
+{%- elif colorName == 'bright' -%}
+{{-     "\033[1m" -}}
+{%  endif -%}
+{%- endmacro -%}
+{# {% macro color(useColor=True)-%}
+{%- if useColor -%}{{
+{
+    "blue":     "\033[34m",
+    "red":      "\033[31m",
+    "green":    "\033[32m",
+    "off":      "\033[0m"
+     
+}}}
+{%- else -%}
+{%    set clr. {"blue": "", "red": "", "green": "", "off": ""} -%}
+{% endif -%} #}
+{# {%- if colors -%}
+{%   set clr. {
+        "blue":     "\033[34m",
+        "red":      "\033[31m",
+        "green":    "\033[32m",
+        "off":      "\033[0m"
+    } 
+%}
+{%- else -%}
+{%    set clr. {"blue": "", "red": "", "green": "", "off": ""} -%}
+{% endif -%} 
+{%- endmacro %} #}
+{# 
+    Macro to display transaction entry.  The usage of colors and the boxbar
+    is determined by the parameters 
+
+#}
+{% macro transaction_entry(entry, colors=True, boxBar=True) -%}
+{%  if colors -%}
+{%   set clr = {
+        "blue":     color('blue'),
+        "red":      color('red'),
+        "green":    color('green'),
+        "off":      color('off'),
+        "bright":   color('bright')
+    } 
+%}
+{%- else -%}
+{%     set clr = {"blue": "", "red": "", "green": "", "off": "", "bright": ""} -%}
+{%  endif -%}
+{% if boxBar -%}
+{%    if colors -%}
+{%        set bar=clr.bright + "┃" + clr.off -%}
+{%-     else -%}
+{%        set bar="┃" -%}
+{%    endif -%}
+{%- else -%}
+{%    set bar=" " -%}
+{% endif -%}
+{{bar}}{{entry.date}}{{bar}}{{"%-15s"|format(entry.transaction_type)}}{{bar}}{{"%-64s"|format(entry.description[:64])-}}
+{{bar}}{% if entry.dc == "C" %}{{ clr.green + "{:12,.2f}".format(entry.amount) + clr.off }}{% else %}            {% endif -%}
+{{bar}}{% if entry.dc == "D" %}{{ clr.red + "{:12,.2f}".format(entry.amount) + clr.off }}{% else %}            {% endif -%}
+{{bar}}{{ clr.blue + "{:12,.2f}".format(entry.balance) + clr.off }}{{bar}}
+{%- endmacro %}
