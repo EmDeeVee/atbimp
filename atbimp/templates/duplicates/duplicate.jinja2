@@ -1,0 +1,13 @@
+{%  from 'base/macros.jinja2' import duplicate_entry, transaction_entry %}
+{%  extends "duplicates/duplicates.jinja2" %}
+{%- block duplicate_header -%}
+{{    "┃  Duplicate Entry" + super() }}
+{%- endblock duplicate_header -%}
+{%- block duplicate_list -%}
+{{    duplicate_entry(duplicate) }}
+{%  endblock duplicate_list -%}
+{%- block duplicate_transactions -%}
+{%  for entry in entries %}
+{{      transaction_entry(entry, True, False, highlight) }}
+{%-  endfor %}
+{%  endblock duplicate_transactions %}

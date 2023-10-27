@@ -149,8 +149,8 @@ CONFIG['db.sqlite3']['dbviews'] = [
         'sql': '''
             CREATE VIEW  IF NOT EXISTS 'list_duplicates'  AS
                 SELECT 
-                    d.id,t.id as 'transaction_id',t.date,a.alias,a.nick_name,a.acct_number,t.transaction_type,t.customer_ref_number,
-                    t.amount,t.dc,t.balance,t.description,
+                    d.id,t.id as 'transaction_id',a.id as 'account_id',t.date,a.alias,a.nick_name,
+                    a.acct_number,t.transaction_type,t.customer_ref_number,t.amount,t.dc,t.balance,t.description,
                     datetime(i.time_stamp, 'localtime') as 'import_time', i.source as 'import_source', t.import_line
                 FROM transactions t
                     INNER JOIN duplicates d ON d.transaction_id = t.id  
@@ -243,6 +243,7 @@ class AtbImpApp(App):
     EC_FILE_NOT_FOUND = 128
     EC_PARAM_WRONG_FORMAT = 129
     EC_PARAM_MISSING = 130
+    EC_RECORD_NOT_FOUND = 131
 
 
 

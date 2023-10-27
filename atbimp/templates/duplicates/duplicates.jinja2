@@ -1,0 +1,15 @@
+{%- block duplicate_header %} 
+┃ {{ super }}
+┃  - The top (green) line shows the transaction as imported for wich duplicates where found.
+┃    Where the duplicate_id is displayed in front of it in square brackets. '[1]'
+┃
+┃  - Subsequent lines (red) show the duplicatates found for this transaction wich are imported
+┃    in the duplicatates table.  Where the duplicate_entry_id is displayed in front of it in 
+┃    normal brackets.  '(2)'
+┃
+┃  To show the details of a duplicate, use the duplicate_id. '[1]' To manipulate duplicate entries
+┃  (accept,delete,skip) use the duplicate_entry_id '(2)'
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{% endblock duplicate_header -%}
+{% block duplicate_list %}{% endblock duplicate_list %}
+{% block duplicate_transactions %}{% endblock duplicate_transactions %}

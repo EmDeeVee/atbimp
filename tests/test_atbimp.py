@@ -321,9 +321,29 @@ def test_atbimp_csv_imp_duplicates(TestAppDb):
     assert report['totalErrors'] == 8
 
 @pytest.mark.argv(['dup', 'ls'])
-def test_atbimp_dup_ls(TestAppDb):
+def test_atbimp_dup_ls(TestAppDb2Months):
     # List all duplicates found
-    assert TestAppDb.exit_code == 0
+    assert TestAppDb2Months.exit_code == 0
+
+def test_atbimp_dup_show_no_id():
+    # Will throw a System Exit (2) and complains about no id given
+    argv=['dub', 'show']
+    with AtbImpAppTest(argv=argv) as app:
+        with pytest.raises(SystemExit) as e_info:
+            app.run()
+            assert e_info.code == 2
+
+@pytest.mark.argv(['dup', 'show', 'me'])
+def test_atbimp_dup_show_wrong_id(TestAppDb2Months):
+    assert TestAppDb2Months.exit_code == TestAppDb2Months.EC_PARAM_WRONG_FORMAT
+
+@pytest.mark.argv(['dup', 'show', '99999'])
+def test_atbimp_dup_show_non_exist_id(TestAppDb2Months):
+    assert TestAppDb2Months.exit_code == TestAppDb2Months.EC_RECORD_NOT_FOUND
+
+@pytest.mark.argv(['dup', 'show', '6'])
+def test_atbimp_dup_show_id(TestAppDb2Months):
+    assert TestAppDb2Months.exit_code == 0
 
 @pytest.mark.argv(['data', 'show'])
 def test_atbimp_data_show(TestAppDb2Months):

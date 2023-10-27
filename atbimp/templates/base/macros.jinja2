@@ -13,45 +13,26 @@
 {{-     "\033[0m" -}}
 {%- elif colorName == 'bright' -%}
 {{-     "\033[1m" -}}
+{%- elif colorName == 'gray' -%}
+{{-     "\033[38;5;238m" -}}
+{%- elif colorName == 'highlight' -%}
+{{-     "\033[1;48;5;254m" -}}
 {%  endif -%}
 {%- endmacro -%}
-{# {% macro color(useColor=True)-%}
-{%- if useColor -%}{{
-{
-    "blue":     "\033[34m",
-    "red":      "\033[31m",
-    "green":    "\033[32m",
-    "off":      "\033[0m"
-     
-}}}
-{%- else -%}
-{%    set clr. {"blue": "", "red": "", "green": "", "off": ""} -%}
-{% endif -%} #}
-{# {%- if colors -%}
-{%   set clr. {
-        "blue":     "\033[34m",
-        "red":      "\033[31m",
-        "green":    "\033[32m",
-        "off":      "\033[0m"
-    } 
-%}
-{%- else -%}
-{%    set clr. {"blue": "", "red": "", "green": "", "off": ""} -%}
-{% endif -%} 
-{%- endmacro %} #}
 {# 
     Macro to display transaction entry.  The usage of colors and the boxbar
     is determined by the parameters 
 
 #}
-{% macro transaction_entry(entry, colors=True, boxBar=True) -%}
+{% macro transaction_entry(entry, colors=True, boxBar=True, highlight=None) -%}
 {%  if colors -%}
 {%   set clr = {
         "blue":     color('blue'),
         "red":      color('red'),
         "green":    color('green'),
         "off":      color('off'),
-        "bright":   color('bright')
+        "bright":   color('bright'),
+        "gray":     color('gray')
     } 
 %}
 {%- else -%}
@@ -66,8 +47,25 @@
 {%- else -%}
 {%    set bar=" " -%}
 {% endif -%}
-{{bar}}{{entry.date}}{{bar}}{{"%-15s"|format(entry.transaction_type)}}{{bar}}{{"%-64s"|format(entry.description[:64])-}}
-{{bar}}{% if entry.dc == "C" %}{{ clr.green + "{:12,.2f}".format(entry.amount) + clr.off }}{% else %}            {% endif -%}
-{{bar}}{% if entry.dc == "D" %}{{ clr.red + "{:12,.2f}".format(entry.amount) + clr.off }}{% else %}            {% endif -%}
-{{bar}}{{ clr.blue + "{:12,.2f}".format(entry.balance) + clr.off }}{{bar}}
+{% if entry.id == highlight -%}
+{%    set ch = color('highlight') -%}
+{% endif -%}
+{{bar}}{{ch}}{{entry.date}}{{bar}}{{"%-15s"|format(entry.transaction_type)}}{{bar}}{{"%-64s"|format(entry.description[:64])-}}
+{{bar}}{% if entry.dc == "C" %}{{ clr.green + "{:12,.2f}".format(entry.amount) + clr.off }}{{ch}}{% else %}            {% endif -%}
+{{bar}}{% if entry.dc == "D" %}{{ clr.red + "{:12,.2f}".format(entry.amount) + clr.off }}{{ch}}{% else %}            {% endif -%}
+{{bar}}{{ clr.blue + "{:12,.2f}".format(entry.balance) + clr.off }}{{ch}}{{bar}}{{clr.off}}
 {%- endmacro %}
+{# 
+    Macro to display duplicate entry
+ #}
+{% macro duplicate_entry(row) %}
+{# first the source entry#}
+{{ color('green')+color('bright') }}[{{row.entry.id}}]: →  → {{row.entry.date}} {{"%-15s"|format(row.entry.transaction_type)}} {{"%-45s"|format(row.entry.description[:45])}} {{"%8.2f"|format(row.entry.amount)}}:{{row.entry.dc}} {{"%8.2f"|format(row.entry.balance)}}:B{{ color('off') }}
+ {{color('gray')}}▫︎ Entry on account: {{row.entry.acct_number}}({{row.entry.alias}}) with nickname: {{row.entry.nick_name}}
+ ▫︎ imported on: {{row.entry.import_time}} from line({{row.entry.import_line}}) of {{ row.entry.import_source }}{{ color('off') -}}
+{% for entry in row.duplicates %}
+ {{color('red')}}↳ ({{entry.id}}): → {{entry.date}} {{"%-15s"|format(entry.transaction_type)}} {{"%-45s"|format(entry.description[:45])}} {{"%8.2f"|format(entry.amount)}}:{{entry.dc}} {{"%8.2f"|format(entry.balance)}}:B{{color('off')}}
+  {{ color('gray') }}▫︎ Duplicate on account {{entry.acct_number}}({{entry.alias}}) with nickname: {{entry.nick_name}}
+  ▫︎ imported on {{entry.import_time}} from line({{entry.import_line}}) of {{entry.import_source }}{{ color('off') -}}
+{% endfor %}
+{%- endmacro  %}
