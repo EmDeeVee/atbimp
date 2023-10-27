@@ -400,14 +400,15 @@ class Csv(Controller):
     #
     @ex(
             help='import transactions from an ATB csv file',
-            aliases=['import'],
+            label='import',
+            aliases=['imp'],
             arguments=[(
                 ['csv_file'],{
                     'help': 'csv file to import',
                     'action': 'store',
                 }
             )]) 
-    def imp(self):
+    def ximport(self):
         '''
         imp | import <csv_file>     import and check csv_file into the transactions table of the
                                     database.  Any suspected duplicates will be stored in seperate
@@ -470,14 +471,14 @@ class Csv(Controller):
     #
     @ex(
             help='sanity check on import file',
-            aliases=['check'],
+            aliases=['chk'],
             arguments=[(
                 ['csv_file'],{
                     'help': 'csv file to check',
                     'action': 'store',
                 }
             )])
-    def chk(self):
+    def check(self):
         '''
         chk | check <csv_file>     check the csv file for know ATB csv issues.  
         '''
