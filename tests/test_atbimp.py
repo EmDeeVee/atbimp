@@ -124,9 +124,9 @@ def TestAppDb2Months(request):
         destroy_tmpdb('./tests/twomonths.db3.sql')
 
 
-## ====================================================================
-## Tests
-##
+# ====================================================================
+# Tests
+#
 def test_atbimp(TestAppNoArg: AtbImpAppTest):
     # test atbimp without any subcommands or arguments
     assert TestAppNoArg.exit_code == 0
@@ -142,6 +142,9 @@ def test_atbimp_ext_sqlite(TestAppArgs):
     dbfile = os.path.basename(TestAppArgs.sqlite3.get_dbfile())
     assert dbfile == 'mydatabase.db3'
 
+# --------------------------------------------------------------------
+# Csv
+#
 @pytest.mark.argv(['csv'])
 def test_atbimp_csv_no_args(TestAppArgs):
     # will just display help and exit code 0
@@ -320,6 +323,9 @@ def test_atbimp_csv_imp_duplicates(TestAppDb):
     assert report['recordsImported'] == 5
     assert report['totalErrors'] == 8
 
+# --------------------------------------------------------------------
+# Duplicates
+#
 @pytest.mark.argv(['dup', 'ls'])
 def test_atbimp_dup_ls(TestAppDb2Months):
     # List all duplicates found
@@ -345,6 +351,49 @@ def test_atbimp_dup_show_non_exist_id(TestAppDb2Months):
 def test_atbimp_dup_show_id(TestAppDb2Months):
     assert TestAppDb2Months.exit_code == 0
 
+def test_atbimp_dup_delete_no_id():
+    # Will throw a System Exit (2) and complains about no id given
+    argv=['dub', 'delete']
+    with AtbImpAppTest(argv=argv) as app:
+        with pytest.raises(SystemExit) as e_info:
+            app.run()
+            assert e_info.code == 2
+
+@pytest.mark.argv(['dup', 'delete', 'me'])
+def test_atbimp_dup_delete_wrong_id(TestAppDb2Months):
+    assert TestAppDb2Months.exit_code == TestAppDb2Months.EC_PARAM_WRONG_FORMAT
+
+@pytest.mark.argv(['dup', 'delete', 'all'])
+def test_atbimp_dup_delete_all(TestAppDb2Months):
+    assert TestAppDb2Months.exit_code == 0
+
+@pytest.mark.argv(['dup', 'delete', '1'])
+def test_atbimp_dup_delete_1(TestAppDb2Months):
+    assert TestAppDb2Months.exit_code == 0
+
+def test_atbimp_dup_import_no_id():
+    # Will throw a System Exit (2) and complains about no id given
+    argv=['dub', 'import']
+    with AtbImpAppTest(argv=argv) as app:
+        with pytest.raises(SystemExit) as e_info:
+            app.run()
+            assert e_info.code == 2
+
+@pytest.mark.argv(['dup', 'import', 'me'])
+def test_atbimp_dup_import_wrong_id(TestAppDb2Months):
+    assert TestAppDb2Months.exit_code == TestAppDb2Months.EC_PARAM_WRONG_FORMAT
+
+@pytest.mark.argv(['dup', 'import', 'all'])
+def test_atbimp_dup_import_all(TestAppDb2Months):
+    assert TestAppDb2Months.exit_code == 0
+
+@pytest.mark.argv(['dup', 'import', '1'])
+def test_atbimp_dup_import_1(TestAppDb2Months):
+    assert TestAppDb2Months.exit_code == 0
+
+# --------------------------------------------------------------------
+# Data
+#
 @pytest.mark.argv(['data', 'show'])
 def test_atbimp_data_show(TestAppDb2Months):
     assert TestAppDb2Months.exit_code == 0

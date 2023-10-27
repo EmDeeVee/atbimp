@@ -41,6 +41,18 @@ class Duplicates(Controller):
         
         return dupEntries
         
+    @ex(hide=True)
+    def _validate_id(self,id):
+        id=id.lower()
+        if not re.fullmatch(r'\d*', id):
+            # No digit, maybe the workd all
+            if not (len(id) and type(id) == str and id =="all"):
+                self.app.log.error('  Invalid id spec. Use id number as displayed by list in square brackets [id]')
+                self.app.exit_code = self.app.EC_PARAM_WRONG_FORMAT
+                return 
+        
+        return id
+
 
     ## ====================================================================
     ## Controller Code
@@ -129,7 +141,45 @@ class Duplicates(Controller):
         }
         self.app.render(data, './duplicates/duplicate.jinja2')
 
-        
+
+    # ----------------------------------------------------------------------
+    # del | rm  | delete: a duplicate or all 
+    #
+    @ex(
+            help="delete one or all duplicates",
+            aliases=['del', 'rm'],
+            arguments=[(['id'],{
+                'help': "the id of the duplicate or 'all'. (displayed by 'list' in square brackets [id])",
+                'action': 'store'
+            })]
+    )
+    def delete(self):
+        id = self._validate_id(self.app.pargs.id)            
+        if id == 'all':
+            # Remove all duplicates;
+            #
+            pass
+        pass
+
+    # ----------------------------------------------------------------------
+    # imp | import: a duplicate or all 
+    #
+    @ex(
+            help="import one or all duplicates",
+            label="import",     
+            aliases=['imp'],
+            arguments=[(['id'],{
+                'help': "the id of the duplicate or 'all'. (displayed by 'list' in square brackets [id])",
+                'action': 'store'
+            })]
+    )
+    def ximport(self):  # import is not a valid name
+        id = self._validate_id(self.app.pargs.id)            
+        if id == 'all':
+            True
+        pass
+
+
 
         
         

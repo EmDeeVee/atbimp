@@ -386,5 +386,48 @@ def test_ext_sqlite_insert_multiple_as_dict_with_empty_value(TestApp: AtbImpAppT
     rowsAffected = TestApp.sqlite3.insert(ins)
     assert rowsAffected == 4
 
+# ---------------------------------------------------------------
+# Delete
+#
+@pytest.mark.argv(['--debug'])
+def test_ext_sqlite_delete_as_string(TestApp: AtbImpAppTest):
+    TestApp.sqlite3.create_model(sqlite_create_test_model())
+
+    # insert 10 rows
+    TestApp.sqlite3.insert(sqlite_create_10_insert_for_select_clauses())
+
+    # Build our delete statment
+    rowsAffected  = TestApp.sqlite3.delete('FROM test where price=2.0')
+
+    # Check the result
+    rowsLeft = TestApp.sqlite3.select('* FROM test')
+
+    assert TestApp.exit_code == 0
+    assert rowsAffected == 3
+    assert len(rowsLeft) == 7
+
+@pytest.mark.argv(['--debug'])
+def test_ext_sqlite_delete_as_dict(TestApp: AtbImpAppTest):
+    TestApp.sqlite3.create_model(sqlite_create_test_model())
+
+    # insert 10 rows
+    TestApp.sqlite3.insert(sqlite_create_10_insert_for_select_clauses())
+
+    # Build our delete statment
+    delete = {
+        'from': 'test',
+        'where': 'price=2.0'
+    }
+    rowsAffected  = TestApp.sqlite3.delete(delete)
+
+    # Check the result
+    rowsLeft = TestApp.sqlite3.select('* FROM test')
+
+    assert TestApp.exit_code == 0
+    assert rowsAffected == 3
+    assert len(rowsLeft) == 7
+
+
+    
 
 

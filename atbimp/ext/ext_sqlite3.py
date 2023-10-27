@@ -671,6 +671,77 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         return self._cur.rowcount        
 
         
+    def delete(self,delete):
+        '''
+        delete()            Delete statment.
+
+        parameters:     delete {string|dict}
+                            {string}    with the delete clause, optionally reqiueres the delete 
+                                        operation keywords like FROM, WHERE, ORDER BY or LIMIT.
+                                        eg:)
+                                            sqlite3.delete('FROM test'))
+                                            sqlite3.delete('FROM test WHERE id>10')
+
+                                        basically a valid sqlite insert statement without the DELETE 
+                                        keyword.
+
+                            {dict}      dict in the form:
+                                        {
+                                            'from':     <string>|<tuple>|list, 
+                                            'where':    <string>,
+                                            'order_by': <string>,
+                                            'limit':    <string>
+                                        }
+
+                                        eg: 
+                                            delete(
+                                                'from': 'test',
+                                                'where': 'id>10'
+                                            })
+
+        Returns:
+            rows affected
+
+        Raises:
+            ValueError:         dict in improper format
+            ConnectionError:    Error in statement.
+
+
+        '''
+        if type(delete) == str:
+            stmt = f"DELETE {delete}"
+
+        elif type(delete) == dict:
+            stmt = f"DELETE"
+
+            if 'from' in delete and len(delete['from']):
+                # from section
+                if type(delete['from']) == str:
+                    stmt += f" FROM {delete['from']}"
+                elif type(delete['from']) == tuple or type(delete['from']) == list:
+                    stmt += f" FROM {','.join(delete['from'])}"
+                else:
+                    raise ValueError
+                
+            if 'where' in delete and len(delete['where']):
+                # where section and
+                if type(delete['where']) == str:
+                    stmt += f" WHERE {delete['where']}"
+                else:
+                    raise ValueError
+                
+            else:
+                raise ValueError
+
+        try:
+            self._cur.execute(stmt)
+            self._con.commit()
+        except:
+            raise ConnectionError
+
+        return self._cur.rowcount        
+
+
     def close(self):
         ''' close the connection '''
         self._con.close()
