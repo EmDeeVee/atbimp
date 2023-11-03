@@ -15,8 +15,10 @@
 {{-     "\033[1m" -}}
 {%- elif colorName == 'gray' -%}
 {{-     "\033[38;5;238m" -}}
-{%- elif colorName == 'highlight' -%}
-{{-     "\033[1;48;5;254m" -}}
+{%- elif colorName == 'highlight1' -%}
+{{-     "\033[1;38;5;1m\033[1;48;5;254m" -}}
+{%- elif colorName == 'highlight2' -%}
+{{-     "\033[1;48;5;226m" -}}
 {%  endif -%}
 {%- endmacro -%}
 {# 
@@ -27,12 +29,14 @@
 {% macro transaction_entry(entry, colors=True, boxBar=True, highlight=None) -%}
 {%  if colors -%}
 {%   set clr = {
-        "blue":     color('blue'),
-        "red":      color('red'),
-        "green":    color('green'),
-        "off":      color('off'),
-        "bright":   color('bright'),
-        "gray":     color('gray')
+        "blue":         color('blue'),
+        "red":          color('red'),
+        "green":        color('green'),
+        "off":          color('off'),
+        "bright":       color('bright'),
+        "gray":         color('gray'),
+        "highlight1":   color('highlight1'),
+        "highlight2":   color('highlight2'),
     } 
 %}
 {%- else -%}
@@ -47,8 +51,8 @@
 {%- else -%}
 {%    set bar=" " -%}
 {% endif -%}
-{% if entry.id == highlight -%}
-{%    set ch = color('highlight') -%}
+{% if entry.id == highlight|int -%}
+{%    set ch = color('highlight1') -%}
 {% endif -%}
 {{bar}}{{ch}}{{entry.date}}{{bar}}{{"%-15s"|format(entry.transaction_type)}}{{bar}}{{"%-64s"|format(entry.description[:64])-}}
 {{bar}}{% if entry.dc == "C" %}{{ clr.green + "{:12,.2f}".format(entry.amount) + clr.off }}{{ch}}{% else %}            {% endif -%}
@@ -58,13 +62,17 @@
 {# 
     Macro to display duplicate entry
  #}
-{% macro duplicate_entry(row) %}
+{% macro duplicate_entry(row, highlight=None) %}
 {# first the source entry#}
 {{ color('green')+color('bright') }}[{{row.entry.id}}]: →  → {{row.entry.date}} {{"%-15s"|format(row.entry.transaction_type)}} {{"%-45s"|format(row.entry.description[:45])}} {{"%8.2f"|format(row.entry.amount)}}:{{row.entry.dc}} {{"%8.2f"|format(row.entry.balance)}}:B{{ color('off') }}
  {{color('gray')}}▫︎ Entry on account: {{row.entry.acct_number}}({{row.entry.alias}}) with nickname: {{row.entry.nick_name}}
  ▫︎ imported on: {{row.entry.import_time}} from line({{row.entry.import_line}}) of {{ row.entry.import_source }}{{ color('off') -}}
 {% for entry in row.duplicates %}
- {{color('red')}}↳ ({{entry.id}}): → {{entry.date}} {{"%-15s"|format(entry.transaction_type)}} {{"%-45s"|format(entry.description[:45])}} {{"%8.2f"|format(entry.amount)}}:{{entry.dc}} {{"%8.2f"|format(entry.balance)}}:B{{color('off')}}
+{%   set ch = '' -%}
+{%   if entry.id == highlight|int -%}
+{%      set ch = color('highlight2') -%}
+{%   endif -%}
+ {{ch}}{{color('red')}}↳ ({{entry.id}}): → {{entry.date}} {{"%-15s"|format(entry.transaction_type)}} {{"%-45s"|format(entry.description[:45])}} {{"%8.2f"|format(entry.amount)}}:{{entry.dc}} {{"%8.2f"|format(entry.balance)}}:B{{color('off')}}
   {{ color('gray') }}▫︎ Duplicate on account {{entry.acct_number}}({{entry.alias}}) with nickname: {{entry.nick_name}}
   ▫︎ imported on {{entry.import_time}} from line({{entry.import_line}}) of {{entry.import_source }}{{ color('off') -}}
 {% endfor %}

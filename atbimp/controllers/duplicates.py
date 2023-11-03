@@ -103,7 +103,7 @@ class Duplicates(Controller):
                 # 'dest': 'id'
             })]
     )
-    def show(self,id=None):
+    def show(self,id=None, dup2highlight=None):
         if not id:
             id = self._validate_id(self.app.pargs.src_id)
 
@@ -145,7 +145,10 @@ class Duplicates(Controller):
         data = { 
             'duplicate': {'entry': duplicate, 'duplicates': dupEntries }, 
             'entries': entries,
-            'highlight': duplicate['transaction_id']
+            'highlight': {
+                'transaction': duplicate['transaction_id'],
+                'duplicate':   dup2highlight
+            }
         }
         self.app.render(data, './duplicates/duplicate.jinja2')
 
@@ -213,7 +216,7 @@ class Duplicates(Controller):
             cont = True
             if confirm:
                 if not brief:
-                    self.show(src_id)
+                    self.show(src_id, dup_id)
                 cont = self._get_confirmation(f"Do you want to delete duplicate ({dup_id})? [y/N]")
                 
 
