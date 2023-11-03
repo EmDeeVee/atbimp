@@ -27,7 +27,7 @@ class Base(Controller):
 '''
 
         # text displayed at the bottom of --help output
-        epilog = ''
+        epilog = ' '
 
         # controller level arguments. ex: 'atbimp --version'
         arguments = [
@@ -35,14 +35,18 @@ class Base(Controller):
             ( [ '-v', '--version' ],
               { 'action'  : 'version',
                 'version' : VERSION_BANNER } ),
+            (['-db'],{
+                'action'  : 'store',
+                'help'    : 'database file to use. (default transactions.db3)'
+            })
         ]
-
+    
 
     def _default(self):
+        # if self.app.pargs.db is not None:
+        #     self.app.dbFile = self.app.pargs.db
         """Default action if no sub-command is passed."""
-
         self.app.args.print_help()
-        print(self.app.sqlite3.get_dbfile())
 
 
     # @ex(

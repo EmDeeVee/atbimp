@@ -34,25 +34,31 @@ class Duplicates(Controller):
             'from':     'list_dup_entries', 
             'where':    f"duplicate_id = {duplicate['id']}"
         }
-        try:
-            dupEntries = self.app.sqlite3.select(qry)
-        except:
-            raise ConnectionError
-        
+        dupEntries = self.app.sqlite3.select(qry)
         return dupEntries
         
     @ex(hide=True)
     def _validate_id(self,id):
-        id=id.lower()
-        if not re.fullmatch(r'\d*', id):
-            # No digit, maybe the workd all
-            if not (len(id) and type(id) == str and id =="all"):
-                self.app.log.error('  Invalid id spec. Use id number as displayed by list in square brackets [id]')
-                self.app.exit_code = self.app.EC_PARAM_WRONG_FORMAT
-                return 
-        
-        return id
+        if type(id) == str:
+            id=id.lower()
+        else:
+            id=str(id)
 
+        if not (re.fullmatch(r'\d*', id) and id != '0'):
+            # No digit, maybe the word all
+            if not (len(id) and id == "all"):
+                return ''
+        
+        return str(id)
+    
+    @ex(hide=True)
+    def _get_confirmation(self, prompt):
+        response = input(prompt).upper()
+        cont=False
+        if response == 'Y' or response == "YES":
+            cont = True
+
+        return cont
 
     ## ====================================================================
     ## Controller Code
@@ -71,18 +77,18 @@ class Duplicates(Controller):
         '''
         duplicates = []
         # find the transactions that have duplictes
-        try:
-            resDuplicates = self.app.sqlite3.select({'query': '*', 'from': 'list_duplicates'})
-        except:
-            raise ConnectionError
+        resDuplicates = self.app.sqlite3.select({'query': '*', 'from': 'list_duplicates'})
         
         # loop trough the duplicates list to find the entries that where not imported.
-        for duplicate in resDuplicates:
-            dupEntries = self._find_duplicate_entries(duplicate)
-            # We have it all
-            duplicates.append({'entry': duplicate, 'duplicates': dupEntries})
+        if len(resDuplicates):
+            for duplicate in resDuplicates:
+                dupEntries = self._find_duplicate_entries(duplicate)
+                # We have it all
+                duplicates.append({'entry': duplicate, 'duplicates': dupEntries})
 
-        self.app.render({'duplicates': duplicates},'./duplicates/list.jinja2')
+            self.app.render({'duplicates': duplicates},'./duplicates/list.jinja2')
+        else:
+            self.app.log.info('No duplicates found.')
 
 
     # ----------------------------------------------------------------------
@@ -91,27 +97,32 @@ class Duplicates(Controller):
     @ex(
             help="show one duplicate",
             aliases=['sh'],
-            arguments=[(['id'],{
-                'help': "the source id of the duplicate. (displayed by 'list' in square brackets [id])",
-                'action': 'store'
+            arguments=[(['src_id'],{
+                'help': "the source id of the duplicate. (displayed by 'list' in square brackets [src_id])",
+                'action': 'store',
+                # 'dest': 'id'
             })]
     )
-    def show(self):
-        id = self.app.pargs.id
-        if not re.fullmatch(r'\d*', id):
-            self.app.log.error('  Invalid id spec. Use id number as displayed by list in square brackets [id]')
+    def show(self,id=None):
+        if not id:
+            id = self._validate_id(self.app.pargs.src_id)
+
+        if len(id)==0:
+            self.app.log.error('  Invalid id spec. Use duplicate source id as displayed by list in square brackets [id]')
             self.app.exit_code = self.app.EC_PARAM_WRONG_FORMAT
             return 
+        
+        if id == 'all':
+            # that is the list statement.
+            self.list()
+            return
 
         # find our duplicate
-        try:
-            duplicate = self.app.sqlite3.select({'query': '*', 'from': 'list_duplicates', 'where': f"id={id}" })
-        except:
-            raise ConnectionError
+        duplicate = self.app.sqlite3.select({'query': '*', 'from': 'list_duplicates', 'where': f"id={id}" })
 
         if len(duplicate) != 1:
             # There can be only one
-            self.app.log.warning(f'  Duplicate with id: {id} not found')
+            self.app.log.warning(f'  Duplicate with source id: [{id}] not found')
             self.app.exit_code = self.app.EC_RECORD_NOT_FOUND
             return 
         
@@ -128,11 +139,8 @@ class Duplicates(Controller):
             'where':  f"account_id={duplicate['account_id']} AND date BETWEEN date('{duplicate['date']}','-1 day') AND date('{duplicate['date']}', '+1 day')",
             'clauses': {'order_by': 't.date, t.id desc'}  
         }
-        try:
-            entries = self.app.sqlite3.select(qry)
-        except:
-            raise ConnectionError
-        
+        entries = self.app.sqlite3.select(qry)
+
         # Render output
         data = { 
             'duplicate': {'entry': duplicate, 'duplicates': dupEntries }, 
@@ -148,21 +156,78 @@ class Duplicates(Controller):
     @ex(
             help="delete one or all duplicates",
             aliases=['del', 'rm'],
-            arguments=[(['id'],{
-                'help': "the id of the duplicate or 'all'. (displayed by 'list' in square brackets [id])",
+            arguments=[(['dup_id'],{
+                'help': "the id of the duplicate or 'all'. (displayed by 'list' in round brackets (dup_id))",
                 'action': 'store'
-            })]
+            }),(['-y', '--yes'],{
+                'help':     "Don't ask for confirmation.",
+                'action':   'store_false',
+                'dest':     'confirm',
+                'default':  True
+            }),(['-b', '--brief'],{
+                'help':     "brief.  Don't show what will be deleted. (ignored when using --yes)",
+                'action':   'store_true',
+                'default':  False
+            })] 
     )
     def delete(self):
-        id = self._validate_id(self.app.pargs.id)            
-        if id == 'all':
+        confirm = self.app.pargs.confirm
+        brief = self.app.pargs.brief           
+        dup_id = self._validate_id(self.app.pargs.dup_id)
+        if len(dup_id) == 0 or dup_id == '0':
+            # We did not pass the test
+            self.app.log.error('  Invalid id spec. Use duplicate id as displayed by list in round brackets (id)')
+            self.app.exit_code = self.app.EC_PARAM_WRONG_FORMAT
+            return 
+
+        elif dup_id == 'all':
             # Remove all duplicates;
-            #
+            # easy
+            # Show what will be deleted
+            cont = True
+            if confirm:
+                if not brief:
+                    self.list()
+                cont = self._get_confirmation("Do you want to delete ALL duplicates? [y/N]")
+
+            if not cont:
+                self.app.exit_code = self.app.EC_CONFIRMATION_CANCEL
+                return 0        # number of rows affected
+            
+            # We're good.  Delete them all
+            rowsAffected =  self.app.sqlite3.delete('FROM duplicates')
+            rowsAffected += self.app.sqlite3.delete('FROM dup_entries')
+
+        else: 
+            # Figure out what to delete
+            qry={'query': 'duplicate_id', 'from': 'dup_entries', 'where': f'id={dup_id}'}
+            res = self.app.sqlite3.select(qry)
+            
+            if len(res) != 1:
+                # There can be only one
+                self.app.log.warning(f'  Duplicate with duplicate id: ({dup_id}) not found')
+                self.app.exit_code = self.app.EC_RECORD_NOT_FOUND
+                return 
+            
+            src_id=str(res[0]['duplicate_id'])
+            cont = True
+            if confirm:
+                if not brief:
+                    self.show(src_id)
+                cont = self._get_confirmation(f"Do you want to delete duplicate ({dup_id})? [y/N]")
+                
+
+            if not cont:
+                self.app.exit_code = self.app.EC_CONFIRMATION_CANCEL
+                return 0        # number of rows affected
+            
+            # We're good. Delete the single duplicate
             pass
+                        
         pass
 
     # ----------------------------------------------------------------------
-    # imp | import: a duplicate or all 
+    # imp | import: a duplicate or all  
     #
     @ex(
             help="import one or all duplicates",
@@ -177,6 +242,10 @@ class Duplicates(Controller):
         id = self._validate_id(self.app.pargs.id)            
         if id == 'all':
             True
+        else:
+            self.app.exit_code = self.app.EC_PARAM_WRONG_FORMAT
+            return
+
         pass
 
 

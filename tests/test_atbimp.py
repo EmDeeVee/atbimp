@@ -1,4 +1,4 @@
-import os, sqlite3
+import os, io, sqlite3
 import pytest
 from atbimp.main import AtbImpAppTest
 
@@ -140,7 +140,13 @@ def test_atbimp_debug(TestAppArgs):
 def test_atbimp_ext_sqlite(TestAppArgs):
     # test that sqlite extension is functional
     dbfile = os.path.basename(TestAppArgs.sqlite3.get_dbfile())
-    assert dbfile == 'mydatabase.db3'
+    assert dbfile == 'transactions.db3'
+
+@pytest.mark.argv(['-db', 'twomonths.db3'])
+def test_atbimp_ext_sqlite_db_file(TestAppArgs):
+    # test that sqlite extension is functional
+    dbfile = os.path.basename(TestAppArgs.sqlite3.get_dbfile())
+    assert dbfile == 'twomonths.db3'
 
 # --------------------------------------------------------------------
 # Csv
@@ -359,18 +365,100 @@ def test_atbimp_dup_delete_no_id():
             app.run()
             assert e_info.code == 2
 
-@pytest.mark.argv(['dup', 'delete', 'me'])
+# ---------- check the confirm function ------
+#
+def test_atbimp_del_confim_empty(monkeypatch):
+    monkeypatch.setattr('sys.stdin', io.StringIO('\n'))
+    # Only test the function of the confirmation routine
+    argv=['dup','del', 'all', '--brief' ] 
+    with AtbImpAppTest(argv=argv) as app:
+        app.run()
+        assert app.exit_code == app.EC_CONFIRMATION_CANCEL
+
+def test_atbimp_del_confim_wrong_input(monkeypatch):
+    monkeypatch.setattr('sys.stdin', io.StringIO('mo\n'))
+    # Only test the function of the confirmation routine
+    argv=['dup','del', 'all', '--brief'] 
+    with AtbImpAppTest(argv=argv) as app:
+        app.run()
+        assert app.exit_code == app.EC_CONFIRMATION_CANCEL
+
+def test_atbimp_del_confim_no(monkeypatch):
+    monkeypatch.setattr('sys.stdin', io.StringIO('no\n'))
+    # Only test the function of the confirmation routine
+    argv=['dup','del', 'all', '--brief'] 
+    with AtbImpAppTest(argv=argv) as app:
+        app.run()
+        assert app.exit_code == app.EC_CONFIRMATION_CANCEL
+
+def test_atbimp_del_confim_n(monkeypatch):
+    monkeypatch.setattr('sys.stdin', io.StringIO('n\n'))
+    # Only test the function of the confirmation routine
+    argv=['dup','del', 'all', '--brief'] 
+    with AtbImpAppTest(argv=argv) as app:
+        app.run()
+        assert app.exit_code == app.EC_CONFIRMATION_CANCEL
+
+def test_atbimp_del_confim_yes(monkeypatch):
+    # should give ConnectionError.  Nothing to delete
+    monkeypatch.setattr('sys.stdin', io.StringIO('yes\n'))
+    argv=['dup','del', 'all', '--brief'] 
+    with AtbImpAppTest(argv=argv) as app:
+        with pytest.raises(ConnectionError):
+            app.run()
+        assert app.exit_code == 0
+
+def test_atbimp_del_confim_y(monkeypatch):
+    # should give ConnectionError.  Nothing to delete
+    monkeypatch.setattr('sys.stdin', io.StringIO('y\n'))
+    argv=['dup','del', 'all'] 
+    with AtbImpAppTest(argv=argv) as app:
+        with pytest.raises(ConnectionError):
+            app.run()
+        assert app.exit_code == 0
+
+def test_atbimp_del_confim_option_yes():
+    # Only test the function of the confirmation routine
+    argv=['dup','del', 'all', '--yes'] 
+    with AtbImpAppTest(argv=argv) as app:
+        with pytest.raises(ConnectionError):
+            app.run()
+        assert app.exit_code == 0
+
+
+@pytest.mark.argv(['dup', 'delete', 'me', '--yes', '--brief'])
 def test_atbimp_dup_delete_wrong_id(TestAppDb2Months):
     assert TestAppDb2Months.exit_code == TestAppDb2Months.EC_PARAM_WRONG_FORMAT
 
-@pytest.mark.argv(['dup', 'delete', 'all'])
-def test_atbimp_dup_delete_all(TestAppDb2Months):
+def test_atbimp_dup_delete_all():
+    argv = ['dup', 'delete', 'all', '--yes']
+    with AtbImpAppTest(argv=argv) as app:
+        with pytest.raises(ConnectionError):
+            app.run()
+        assert app.exit_code == 0
+
+def test_atbimp_dup_delete_1():
+    # NO DB acative should railse connnection error
+    argv = ['dup', 'delete', '1', '--yes']
+    with AtbImpAppTest(argv=argv) as app:
+        with pytest.raises(ConnectionError):
+            app.run()
+        assert app.exit_code == 0
+
+@pytest.mark.argv(['dup', 'delete', '1', '--yes'])
+def test_atbimp_dup_delete_1db(TestAppDb2Months):
+    # With the twomonths db should be fine
     assert TestAppDb2Months.exit_code == 0
 
-@pytest.mark.argv(['dup', 'delete', '1'])
-def test_atbimp_dup_delete_1(TestAppDb2Months):
-    assert TestAppDb2Months.exit_code == 0
+@pytest.mark.argv(['dup', 'delete', '99', '--yes'])
+def test_atbimp_dup_delete_99db(TestAppDb2Months):
+    # With the twomonths db should be fine
+    assert TestAppDb2Months.exit_code == TestAppDb2Months.EC_RECORD_NOT_FOUND
 
+
+
+# ---------- duplicates import  ------
+#
 def test_atbimp_dup_import_no_id():
     # Will throw a System Exit (2) and complains about no id given
     argv=['dub', 'import']
@@ -389,7 +477,7 @@ def test_atbimp_dup_import_all(TestAppDb2Months):
 
 @pytest.mark.argv(['dup', 'import', '1'])
 def test_atbimp_dup_import_1(TestAppDb2Months):
-    assert TestAppDb2Months.exit_code == 0
+    assert TestAppDb2Months.exit_code == TestAppDb2Months.EC_PARAM_WRONG_FORMAT
 
 # --------------------------------------------------------------------
 # Data

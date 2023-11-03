@@ -237,6 +237,7 @@ class AtbImpApp(App):
 
     indexes = True
     dbviews = True
+    dbFile  = None
 
     # Error codes.  We don't know what exit codes cement uses
     # so lets start ours at 128
@@ -244,6 +245,7 @@ class AtbImpApp(App):
     EC_PARAM_WRONG_FORMAT = 129
     EC_PARAM_MISSING = 130
     EC_RECORD_NOT_FOUND = 131
+    EC_CONFIRMATION_CANCEL = 132
 
 
 

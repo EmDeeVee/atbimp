@@ -12,11 +12,11 @@ LOG = minimal_logger(__name__)
 
 
 
-def sqlite3_pre_run_hook(app):
+def sqlite3_post_argument_hook(app):
     # Add the sqlite3 member to app and attach it with the
     # database.sqlite3 handler.
     #
-    LOG.debug('Inside sqlite3_pre_run_hook! Seting up sqlite3 handler')
+    LOG.debug('Inside sqlite3_post_argument_hook! Seting up sqlite3 handler')
     _handler = app.handler.get('db', 'sqlite3')
     app.sqlite3=_handler()
     app.sqlite3.setup(app)
@@ -71,8 +71,15 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         # setup the app of our extension self.  Cement documentation
         # not clear on how to handle this.
         app.sqlite3.app = app
+        if self.app.pargs.db is not None:
+            dbFile = self.app.pargs.db
+        else:
+            dbFile = app.config.get(app.label, 'db_file')
+        app.sqlite3.set_dbfile(dbFile)
+        
+
+        
         if len(app.models):
-            app.sqlite3.set_dbfile(app.config.get(app.label, 'db_file'))
             app.sqlite3.connect()
             app.sqlite3.models = {}
             for modelName in app.models:
@@ -752,6 +759,6 @@ def load(app):
     # do something to extend cement
     app.interface.define(DatabaseInterface)
     app.handler.register(SQLite3Handler)
-    app.hook.register('pre_run', sqlite3_pre_run_hook)
+    app.hook.register('post_argument_parsing', sqlite3_post_argument_hook)
     app.hook.register('post_run', sqlite3_post_run_hook)
 
