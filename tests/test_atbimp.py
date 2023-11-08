@@ -23,6 +23,11 @@ def get_chkreport(app):
     return app.controller._controllers_map['csv'].chkreport
 
 def create_tmpdb(inputFile):
+    # a faulty test wil leave a db file behind. So let's get 
+    # rid of it.
+    destroy_tmpdb(inputFile)
+
+    # now we can do the work
     dbFile = inputFile[:-4]
     con=sqlite3.connect(dbFile)
     cur=con.cursor()
@@ -65,26 +70,10 @@ def TestAppArgs(request):
 def TestAppDb(request):
     argv = request.node.get_closest_marker('argv').args[0]
     with AtbImpAppTest(argv=argv) as app:
-        # In this case we need the models that belong to 
-        # our appliction.  In the previous tests we didn't
-        # want them.  So no <models> dict in the TestApp
-        #
-        app.models = [
-            'months',
-            'transactions',
-            'accounts',
-            'imports',
-            'duplicates',
-            'dup_entries'
-        ]
-        app.indexes = True
-        app.dbviews = True
-
-    
         app.run()
         yield app
 
-        dbfile = app.sqlite3.get_dbfile()
+        dbfile = app.sqlite3.dbfile()
         if os.path.exists(dbfile):
             os.remove(dbfile)
 
@@ -101,23 +90,6 @@ def TestAppDb2Months(request):
 
     argv = request.node.get_closest_marker('argv').args[0]
     with AtbImpAppTest(argv=argv) as app:
-        # In this case we need the models that belong to 
-        # our appliction. We dit create all the models and 
-        # views already using our sql script above, howerver
-        # this way they will be automatically connected to 
-        # the app.sqlite3 object.
-        #
-        app.models = [
-            'months',
-            'transactions',
-            'accounts',
-            'imports',
-            'duplicates',
-            'dup_entries'
-        ]
-        app.indexes = True
-        app.dbviews = True
-
         app.run()
         yield app
 
@@ -139,13 +111,13 @@ def test_atbimp_debug(TestAppArgs):
 @pytest.mark.argv(['--debug'])
 def test_atbimp_ext_sqlite(TestAppArgs):
     # test that sqlite extension is functional
-    dbfile = os.path.basename(TestAppArgs.sqlite3.get_dbfile())
+    dbfile = os.path.basename(TestAppArgs.sqlite3.dbfile())
     assert dbfile == 'transactions.db3'
 
 @pytest.mark.argv(['-db', 'twomonths.db3'])
 def test_atbimp_ext_sqlite_db_file(TestAppArgs):
     # test that sqlite extension is functional
-    dbfile = os.path.basename(TestAppArgs.sqlite3.get_dbfile())
+    dbfile = os.path.basename(TestAppArgs.sqlite3.dbfile())
     assert dbfile == 'twomonths.db3'
 
 # --------------------------------------------------------------------
@@ -400,29 +372,23 @@ def test_atbimp_del_confim_n(monkeypatch):
         assert app.exit_code == app.EC_CONFIRMATION_CANCEL
 
 def test_atbimp_del_confim_yes(monkeypatch):
-    # should give ConnectionError.  Nothing to delete
     monkeypatch.setattr('sys.stdin', io.StringIO('yes\n'))
     argv=['dup','del', 'all', '--brief'] 
     with AtbImpAppTest(argv=argv) as app:
-        with pytest.raises(ConnectionError):
-            app.run()
+        app.run()
         assert app.exit_code == 0
 
 def test_atbimp_del_confim_y(monkeypatch):
-    # should give ConnectionError.  Nothing to delete
     monkeypatch.setattr('sys.stdin', io.StringIO('y\n'))
     argv=['dup','del', 'all'] 
     with AtbImpAppTest(argv=argv) as app:
-        with pytest.raises(ConnectionError):
-            app.run()
+        app.run()
         assert app.exit_code == 0
 
 def test_atbimp_del_confim_option_yes():
-    # Only test the function of the confirmation routine
     argv=['dup','del', 'all', '--yes'] 
     with AtbImpAppTest(argv=argv) as app:
-        with pytest.raises(ConnectionError):
-            app.run()
+        app.run()
         assert app.exit_code == 0
 
 
@@ -430,29 +396,20 @@ def test_atbimp_del_confim_option_yes():
 def test_atbimp_dup_delete_wrong_id(TestAppDb2Months):
     assert TestAppDb2Months.exit_code == TestAppDb2Months.EC_PARAM_WRONG_FORMAT
 
-def test_atbimp_dup_delete_all():
-    argv = ['dup', 'delete', 'all', '--yes']
-    with AtbImpAppTest(argv=argv) as app:
-        with pytest.raises(ConnectionError):
-            app.run()
-        assert app.exit_code == 0
 
 def test_atbimp_dup_delete_1():
-    # NO DB acative should railse connnection error
     argv = ['dup', 'delete', '1', '--yes']
     with AtbImpAppTest(argv=argv) as app:
-        with pytest.raises(ConnectionError):
-            app.run()
-        assert app.exit_code == 0
+        app.run()
+        assert app.exit_code == app.EC_RECORD_NOT_FOUND
 
-@pytest.mark.argv(['dup', 'delete', '1', '--yes'])
+@pytest.mark.argv(['dup', 'delete', '7', '--yes'])
 def test_atbimp_dup_delete_1db(TestAppDb2Months):
     # With the twomonths db should be fine
     assert TestAppDb2Months.exit_code == 0
 
 @pytest.mark.argv(['dup', 'delete', '99', '--yes'])
 def test_atbimp_dup_delete_99db(TestAppDb2Months):
-    # With the twomonths db should be fine
     assert TestAppDb2Months.exit_code == TestAppDb2Months.EC_RECORD_NOT_FOUND
 
 

@@ -100,7 +100,7 @@ class Data(Controller):
         # get the contents of the accounts table.  We need this later
         #
         try:
-            accounts = self.app.sqlite3.select("* FROM ACCOUNTS")
+            accounts = self.app.sqlite3.select({'query': '*', 'from': 'account'})
         except:
             raise ConnectionError
 
@@ -110,7 +110,7 @@ class Data(Controller):
             # Lookup our account id
             qry={
                 'query': '*',
-                'from':  'accounts',
+                'from':  'account',
                 'where': f"alias='%{account}%' OR acct_number LIKE '%{account}%' OR nick_name LIKE '%{account}%';"
             }
             try:
@@ -129,7 +129,7 @@ class Data(Controller):
 
         qry={
             'query': '*',
-            'from': 'transactions t',
+            'from': 'transaction t',
             'clauses': {'order_by': 't.date, t.id desc'}
         }
         # Add account number, if any, into the mix
@@ -155,7 +155,7 @@ class Data(Controller):
             where = qry['where']
             acctQry = {
                 'query': 'DISTINCT account_id',
-                'from':  'transactions',
+                'from':  'transaction',
                 'where':  where
             }
             try:

@@ -8,12 +8,16 @@ from .controllers.base import Base
 from .controllers.csv import Csv
 from .controllers.duplicates import Duplicates
 from .controllers.data import Data
+from cement import minimal_logger
+
+LOG = minimal_logger(__name__)
 
 # configuration defaults
 #
 # TODO: figure out how this works with a cement yaml config file
 #
-CONFIG = init_defaults('atbimp', 'db.sqlite3')
+CONFIG = init_defaults('atbimp')
+# CONFIG = init_defaults('atbimp', 'db.sqlite3')
 
 # CONFIG['atbimp']['db_file'] = '~/.atbimp/transactions.db3'
 CONFIG['atbimp']['db_file'] = './transactions.db3'
@@ -41,142 +45,12 @@ CONFIG['atbimp']['exp_tbl_cols'] = [
     'bank_reference_number'     #9
 ]
 
-# db.accounts.tbl:
-#
-# In our version of the database there will be a list of acounts in the 'accounts' table.
-# This table will hold a list of all bank accounts found. 
-#
-CONFIG['db.sqlite3']['accounts'] = [
-    "'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
-    "'alias' TEXT",                     # Last 4 digits of our account number
-    "'acct_routing' TEXT",              # bank routing info
-    "'acct_number' TEXT",               # your account number
-    "'nick_name' TEXT"                 # a nick name that can be provided by the user
-]
-
-# db.months.tbl
-#
-# We put the year-month porttion of the data into a separate table, just to speed up
-# looking for all transaction of a particular month.
-CONFIG['db.sqlite3']['months'] = [
-    "'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
-    "'year' INTEGER",                   # Last 4 digits of our account number
-    "'month' INTEGER",                  # bank routing info
-]
-
-# db.imports.table
-#
-# logging all the imports that have been done, so in case of duplicates we can 
-# trace back who did what
-#
-CONFIG['db.sqlite3']['imports'] = [
-    "'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
-    "'time_stamp' TEXT DEFAULT CURRENT_TIMESTAMP",
-    "'source' TEXT"
-]
-
-# db.duplicates.table
-#
-# Link between the duplicate entries and original transactions found
-#
-CONFIG['db.sqlite3']['duplicates'] = [
-    "'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
-    "'transaction_id' INTEGER",      # The link with the transactions table
-]
-
-# db.dup_entries.table
-#
-# basically the same layout as the cvs file, with as extras
-# the id and the foreign_key for the import log and duplicates
-#
-CONFIG['db.sqlite3']['dup_entries'] = [
-    "'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
-    "'duplicate_id' INTEGER",       # The link with the dublink table
-    "'account_id' INTEGER",         # The link with the accounts table
-    "'month_id' INTEGER",           # The link to months table
-    "'import_id' INTEGER",          # The link with the imports table
-    "'import_line' INTEGER",        # The line number in the import file
-    "'date' TEXT",
-    "'transaction_type' TEXT",
-    "'customer_ref_number' TEXT",
-    "'amount' REAL",
-    "'dc' TEXT",                # is the amount Debit or Credit (D/C)
-    "'balance' REAL",           # running balance
-    "'description' TEXT",
-    "'bank_reference' TEXT"
-]
 
 
-# db.transactions.table:
-#
-CONFIG['db.sqlite3']['transactions'] = [
-    "'id' INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
-    "'account_id' INTEGER",    # The link with the accounts table
-    "'month_id' INTEGER",      # The link to months table
-    "'import_id' INTEGER",     # The link with the imports table
-    "'import_line' INTEGER",    # The line number in the import file
-    "'date' TEXT",
-    "'transaction_type' TEXT",
-    "'customer_ref_number' TEXT",
-    "'amount' REAL",
-    "'dc' TEXT",                # is the amount Debit or Credit (D/C)
-    "'balance' REAL",           # running balance
-    "'description' TEXT",
-    "'bank_reference' TEXT"
-]
+def atbimp_post_argument_hook(app):
+    LOG.debug('Inside AtbImp.post_setup hook!, setting up database')
+    app.setupdb()
 
-# db.transactions.indexes
-# 
-# a list of indexes to create.  Set app.indexes to True in order to 
-# automatically create them
-#
-CONFIG['db.sqlite3']['indexes'] = [
-    {
-        'index':    'trans_idx',
-        'model':    'transactions',
-        'fields':   'account_id,date,amount,dc,balance'
-    }
-]
-
-# db.transactions.views
-#
-# a list of views to create. Set app.dbviews to True in order to 
-# automatically create them
-#
-CONFIG['db.sqlite3']['dbviews'] = [
-    {
-        'name': 'list_duplicates',
-        'sql': '''
-            CREATE VIEW  IF NOT EXISTS 'list_duplicates'  AS
-                SELECT 
-                    d.id,t.id as 'transaction_id',a.id as 'account_id',t.date,a.alias,a.nick_name,
-                    a.acct_number,t.transaction_type,t.customer_ref_number,t.amount,t.dc,t.balance,t.description,
-                    datetime(i.time_stamp, 'localtime') as 'import_time', i.source as 'import_source', t.import_line
-                FROM transactions t
-                    INNER JOIN duplicates d ON d.transaction_id = t.id  
-                    INNER JOIN accounts a ON t.account_id = a.id
-                    INNER JOIN imports i ON t.import_id = i.id
-                WHERE
-                    t.id IN (SELECT transaction_id FROM duplicates)
-            ;
-        '''
-    },
-    {
-        'name': 'list_dup_entries',
-        'sql': '''
-            CREATE VIEW  IF NOT EXISTS 'list_dup_entries'  AS
-            SELECT
-                e.id,d.id as 'duplicate_id',e.date,a.alias, a.acct_number,a.nick_name,e.transaction_type,e.customer_ref_number,
-                e.amount,e.dc,e.balance,e.description,
-                datetime(i.time_stamp, 'localtime') as 'import_time', i.source as 'import_source', e.import_line
-            FROM dup_entries e
-                INNER JOIN duplicates d ON e.duplicate_id = d.id
-                INNER JOIN accounts a ON e.account_id = a.id
-                INNER JOIN imports i ON e.import_id = i.id
-            ;
-        '''
-    }
-]
 
 class AtbImpApp(App):
     """ATB CSV Import and List Application primary application."""
@@ -219,25 +93,10 @@ class AtbImpApp(App):
         ]
 
         # hooks
-        hooks = []
+        hooks = [
+            ('post_argument_parsing', atbimp_post_argument_hook )
+        ]
 
-
-
-    # models to use in our app.  All models listed here wil expect a 
-    # config["model"]["{modelName}"] setting with the layout.
-    # these models will automatically created if they don't exist
-    models = [
-        'months',
-        'transactions',
-        'accounts',
-        'imports',
-        'duplicates',
-        'dup_entries'
-    ]
-
-    indexes = True
-    dbviews = True
-    dbFile  = None
 
     # Error codes.  We don't know what exit codes cement uses
     # so lets start ours at 128
@@ -246,6 +105,46 @@ class AtbImpApp(App):
     EC_PARAM_MISSING = 130
     EC_RECORD_NOT_FOUND = 131
     EC_CONFIRMATION_CANCEL = 132
+
+    def setupdb(self):
+        # Figure out our db file and let sqlite3 know
+        if self.pargs.db is not None:
+            self.dbFile = self.pargs.db
+        else:
+            self.dbFile = self.config.get(self.label, 'db_file')
+
+        # Pave the way
+        dbFile = fs.abspath(self.dbFile)
+        dbDir = os.path.dirname(dbFile)
+        if not os.path.exists(dbDir):
+            os.makedirs(dbDir)
+
+        # Connect to the database
+        self.sqlite3.connect(self.dbFile)
+
+        # Turn foreign_keys on  
+        self.sqlite3.pragma('FOREIGN_KEYS = ON;')
+
+        # check our invetory
+        models = self.sqlite3.show_models()
+        if len(models) == 0:
+            # Empty db, we have to fill this
+            #
+            # BUG: Works only inside the project directory!!
+            ret = self.sqlite3.import_script( f'{os.path.dirname(os.path.realpath(__file__))}/../config/initdb.sql')
+
+            # Let's try again
+            models = self.sqlite3.show_models()
+            if len(models) == 0:
+                # Give upp
+                raise ValueError
+
+        # We're good. Give our models to sqlite3
+        # 
+        self.sqlite3._models = {}
+        for model in models:
+            self.sqlite3._models.update({f"{model['name']}": model})
+        
 
 
 
@@ -257,7 +156,7 @@ class AtbImpAppTest(TestApp,AtbImpApp):
     class Meta:
         label = 'atbimp'
 
-    # Override models, so we don't automatically create tehm
+    # Override models, so we don't automatically create them
     models = []
     indexes = False
     dbviews = False

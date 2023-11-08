@@ -28,12 +28,11 @@ def sqlite_connect(app):
     #
     if os.path.exists(testdb):
         os.remove(testdb)
-    app.sqlite3.set_dbfile(testdb)
-    app.sqlite3.connect()
+    app.sqlite3.connect(testdb)
 
 def sqlite_cleanup(app):
     ''' Helper function: Close and/or cleanup sqlite3 test connection '''
-    db_file = app.sqlite3.get_dbfile()
+    db_file = app.sqlite3.dbfile()
     app.sqlite3.close()
     os.remove(db_file)
 
@@ -110,16 +109,15 @@ def TestApp(request: pytest.FixtureRequest):
 # ---------------------------------------------------------------
 # Connection
 #
-@pytest.mark.argv(['--debug'])
+@pytest.mark.argv(['--debug', '-db', testdb ])
 def test_ext_sqlite(TestApp: AtbImpAppTest):
     # test that sqlite extension is functional
-    TestApp.sqlite3.set_dbfile(testdb)
-    assert os.path.basename(TestApp.sqlite3.get_dbfile()) == os.path.basename(testdb)
+    assert os.path.basename(TestApp.sqlite3.dbfile()) == os.path.basename(testdb)
 
 @pytest.mark.argv(['--debug'])
 def test_ext_sqlite_connect(TestApp: AtbImpAppTest):
     # test that sqlite is creating a database file and closes it
-    assert os.path.exists(TestApp.sqlite3.get_dbfile())
+    assert os.path.exists(TestApp.sqlite3.dbfile())
 
 # ---------------------------------------------------------------
 # Inventory.  model, index , view ...

@@ -4,7 +4,6 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-
         {
             "name": "atbimp no args",
             "type": "python",
@@ -12,7 +11,16 @@
             "program": "env/bin/atbimp",
             "args": "-d",
             "console": "integratedTerminal",
-            "justMyCode": true
+            "justMyCode": false
+        },
+        {
+            "name": "atbimp -db twomonts.db3",
+            "type": "python",
+            "request": "launch",
+            "program": "env/bin/atbimp",
+            "args": "-db twomonths.db3",
+            "console": "integratedTerminal",
+            "justMyCode": false
         },
         {
             "name": "atbimp csv check {no header}",

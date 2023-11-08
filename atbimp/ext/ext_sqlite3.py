@@ -2,29 +2,27 @@
 '''
 SQlite 3 wrapper for cement.  
 '''
-import os
 from cement.core.interface import Interface
 from cement.core import handler
 from cement import minimal_logger
-from cement.utils import fs
 
 LOG = minimal_logger(__name__)
 
 
 
-def sqlite3_post_argument_hook(app):
-    # Add the sqlite3 member to app and attach it with the
-    # database.sqlite3 handler.
-    #
-    LOG.debug('Inside sqlite3_post_argument_hook! Seting up sqlite3 handler')
-    _handler = app.handler.get('db', 'sqlite3')
-    app.sqlite3=_handler()
-    app.sqlite3.setup(app)
-
 def sqlite3_post_run_hook(app):
+    LOG.debug('Inside sqlite3_post_argument_hook! Closing the database')
     # Close database
     if app.sqlite3._con:
         app.sqlite3.close()
+
+
+def sqlite3_post_setup_hook(app):
+    LOG.debug('Inside sqlite3_post_setup_hook! Setting up sqlite3 handler')
+    # setup our sqlite3 var
+    handle = app.handler.get('db', 'sqlite3')
+    app.sqlite3 = handle()
+    app.sqlite3._sqlite3 =  __import__(app.sqlite3.Meta.sqlite3_module, globals(), locals(), 0)
 
 
 class DatabaseInterface(Interface):
@@ -51,55 +49,11 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         interface='db'
 
     _sqlite3 = None                 # The module
-    _db_file= "mydatabase.db3"      # internal member hoding the db file
+    _db_file= None                  # internal member hoding the db file
     _con = None                     # db connection
     _cur = None                     # db cursor
     _models = []                    # list of models we use
     
-
-    def __init__(self, *args, **kw):
-        super().__init__(*args, **kw)
-        self._sqlite3 =  __import__(self.Meta.sqlite3_module, 
-                                   globals(), locals(), 0)
-
-    def setup(self, app):
-        # Open database and populate our models, if they don't
-        # already exist
-        #
-
-        # FIXME:  Probably the wrong place for this. Since we now have
-        # setup the app of our extension self.  Cement documentation
-        # not clear on how to handle this.
-        app.sqlite3.app = app
-        if self.app.pargs.db is not None:
-            dbFile = self.app.pargs.db
-        else:
-            dbFile = app.config.get(app.label, 'db_file')
-        app.sqlite3.set_dbfile(dbFile)
-        
-
-        
-        if len(app.models):
-            app.sqlite3.connect()
-            app.sqlite3.models = {}
-            for modelName in app.models:
-                model = app.sqlite3._check_or_create_app_model(modelName)        
-                app.sqlite3.models.update({f"{modelName}": model[0]})
-
-        # Let's see if cement user want's us to create indexes
-        #
-        if hasattr(app, 'indexes') and app.indexes:
-            indexes = app.config.get('db.sqlite3', 'indexes')
-            for index in indexes:
-                index.update({'ifnotexists': True})
-                app.sqlite3.create_index(index)
-
-        # Let's see if cement user want's us to create views
-        if hasattr(app, 'dbviews') and app.dbviews:
-            dbviews = app.config.get('db.sqlite3', 'dbviews')
-            for dbview in dbviews:
-                dbview.update({'ifnotexists': True})
-                app.sqlite3.create_view(dbview)
 
 
     # ========================================================================
@@ -118,19 +72,40 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         return ret
 
 
+    def _escape_from(self,from_clause):
+        '''
+        _escape_from(from)
 
-    def _check_or_create_app_model(self, modelName):
-        model = self.show_models(modelName)
-        if len(model) == 0:
-            # model is not there, we have to create one
-            self.create_model({'name': modelName, 'fields': self.app.config.get('db.sqlite3', modelName)})
-            # Try again
-            model = self.show_models(modelName)
-            if len(model) == 0:
-                # again?  give up
-                raise AttributeError
+        ``from'': str|tuple|list can be in the following formats
+            - "tabel"
+            - "tabel1, "table2, table3"
+            - "table t"
+            - "table1 t1, table2 t2, table3 t3"
+        regadless of the fact if their presentent as a string, list or tuple.
 
-        return model
+        In all cases the table name has to be escaped with quotes to avoid a
+        collision with an sqlite keyword.  Such as the table ``transaction'' 
+        in the atbimp project.
+        '''
+
+        # first seperate the tablse
+        if type(from_clause) == str:
+            tables = from_clause.split(',')
+        elif type(from_clause) == list or type(from_clause) == tuple:
+            tables = from_clause
+        
+        ret=[]
+        # separate the tables from the aliases.
+        for i,table in enumerate(tables):
+            tblAlias = table.split()
+            val=f"'{tblAlias[0]}'"
+            if len(tblAlias) > 1:
+                val += f" {tblAlias[1]}"
+            ret.append(val)
+
+        
+        return ",".join(ret)
+
 
     def _lookup_inventory(self, inventory_type, filter=''):
         # Lookup tables, views and indexes in sqlite_master table.
@@ -154,6 +129,7 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
             elif inventory_type == 'index':
                 ret.append(self._get_index_info(item[1]))
             else:
+                # TODO: Where is get_view_info() ???
                 pass
 
         return ret
@@ -210,7 +186,7 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
             modelName = model['name']
 
         try:
-            stmt = f"PRAGMA table_info({model})"
+            stmt = f"PRAGMA table_info('{model}')"
             res = self._cur.execute(stmt)
             fields=res.fetchall()
         except:
@@ -239,7 +215,7 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
             raise ValueError
         
         try:
-            stmt = f"PRAGMA index_info({indexName});"
+            stmt = f"PRAGMA index_info('{indexName}');"
             res = self._cur.execute(stmt)
             fields=res.fetchall()
         except:
@@ -269,7 +245,7 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
             ret += ', '                    
     
         # We couldn't use join() so remove the last 'comma space'
-        # FIXME: Yes we can.  Just build a list first and then do join()
+        # TODO: Yes we can.  Just build a list first and then do join()
         #
         return ret[:-2]
 
@@ -278,34 +254,69 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
     # Interface Functions
     # ========================================================================
         
-    def set_dbfile(self, db_file: str):
-        ''' set the db_file and create parent dir if needed '''
-        self._db_file = fs.abspath(db_file)
-        db_dir = os.path.dirname(self._db_file)
-        if not os.path.exists(db_dir):
-            os.makedirs(db_dir)
-        
-
-    def get_dbfile(self): 
+    def dbfile(self): 
         ''' get the active db_file'''
         return self._db_file
     
-    def connect(self):
+    def connect(self, dbfile):
         '''
         Connect to the given database
+
+        Parameters:
+            dbfile:                 (str)sqlite db file to use
         
         raises:
-            ConnectionEror:         No db file given
-            ConnectionOrror:        Error opening db
+            ValueError:             No db file given
+            ConnectionError:        Error opening db
         '''
-        if len(self._db_file) == 0:
-            raise ConnectionError('No db file given')
+        if len(dbfile) == 0:
+            raise ValueError('No db file given')
         else:
             try:
-                self._con = self._sqlite3.connect(self._db_file)
+                self._con = self._sqlite3.connect(dbfile)
                 self._cur = self._con.cursor()
             except:
                 raise ConnectionError('Error opening db file')
+
+            self._db_file = dbfile
+
+    def pragma(self, pragma):
+        '''
+        pragma()                send a pragma to the engine
+                                eg) pragma('FOREIGN_KEYS = ON')
+
+        Parameters:
+            pragma:             (str) pragma and it's value
+
+        Returns:
+            <mixed>                 Returns what the fetchall() returns
+
+        Raises:
+            ValueError:             No pragma given
+            ConnectionError:        wrong pragma string
+        '''
+        if len(pragma) == 0:
+            raise ValueError('No pragma given')
+        else:
+            try:
+                stmt = f"PRAGMA {pragma}"
+                res = self._cur.execute(stmt)
+                ret = res.fetchall()
+            except:
+                raise ConnectionError('Wrong pragma string')
+            
+            return ret
+
+    def import_script(self, sqlfile):
+        stmt = ""
+        ret = None
+        try:
+            with open(sqlfile) as f:
+                stmt = f.read()
+            self._cur.executescript(stmt)
+        except:
+            raise ConnectionError
+            
             
     def create_model(self, dictModel):
         '''
@@ -361,6 +372,16 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         Retuns:                 An Array of dicts containing the table_info for each table found
         '''
         return self._lookup_inventory('table', filter)
+    
+    def model(self, modelName: str):
+        '''
+        model(modelName: str)       Get cached info of model
+        '''
+        if len(modelName) == 0:
+            raise ValueError('No model name given')
+
+        # BUG: what is this?  model = 'poe' ???? 
+        model = 'poe'
     
 
     def create_index(self, index, bUnique=False, bIfNotEists=False):
@@ -520,12 +541,14 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
             stmt = f"SELECT {query['query']}"
             if 'from' in query and len(query['from']):
                 # from section
-                if type(query['from']) == str:
-                    stmt += f" FROM {query['from']}"
-                elif type(query['from']) == tuple or type(query['from']) == list:
-                    stmt += f" FROM {','.join(query['from'])}"
-                else:
-                    raise ValueError
+                # if type(query['from']) == str:
+                #     stmt += f" FROM '{query['from']}'"
+                # elif type(query['from']) == tuple or type(query['from']) == list:
+                #     lst = "','".join(query['from'])
+                #     stmt += f" FROM '{lst}'"
+                # else:
+                #     raise ValueError
+                stmt += f" FROM {self._escape_from(query['from'])}"
                 
             if 'where' in query and len(query['where']):
                 # where section and
@@ -615,7 +638,7 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
             stmt = f"INSERT {insert};"
 
         elif type(insert) == dict:
-            stmt = f"INSERT INTO {insert['into']}"
+            stmt = f"INSERT INTO '{insert['into']}'"
             if 'data' in insert and len(insert['data']):
                 # data takes precedence over the cols value pair
                 columns = []
@@ -722,13 +745,15 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
             stmt = f"DELETE"
 
             if 'from' in delete and len(delete['from']):
-                # from section
-                if type(delete['from']) == str:
-                    stmt += f" FROM {delete['from']}"
-                elif type(delete['from']) == tuple or type(delete['from']) == list:
-                    stmt += f" FROM {','.join(delete['from'])}"
-                else:
-                    raise ValueError
+                # # from section
+                # if type(delete['from']) == str:
+                #     stmt += f" FROM '{delete['from']}'"
+                # elif type(delete['from']) == tuple or type(delete['from']) == list:
+                #     lst = "','".join(delete['from'])
+                #     stmt += f" FROM '{lst}'"
+                # else:
+                #     raise ValueError
+                stmt += f" FROM {self._escape_from(delete['from'])}"
                 
             if 'where' in delete and len(delete['where']):
                 # where section and
@@ -759,6 +784,6 @@ def load(app):
     # do something to extend cement
     app.interface.define(DatabaseInterface)
     app.handler.register(SQLite3Handler)
-    app.hook.register('post_argument_parsing', sqlite3_post_argument_hook)
+    app.hook.register('post_setup', sqlite3_post_setup_hook)
     app.hook.register('post_run', sqlite3_post_run_hook)
 

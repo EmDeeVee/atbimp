@@ -31,7 +31,7 @@ class Duplicates(Controller):
     def _find_duplicate_entries(self, duplicate):
         qry = {
             'query':    '*', 
-            'from':     'list_dup_entries', 
+            'from':     'list_duplicate_entry', 
             'where':    f"duplicate_id = {duplicate['id']}"
         }
         dupEntries = self.app.sqlite3.select(qry)
@@ -77,7 +77,7 @@ class Duplicates(Controller):
         '''
         duplicates = []
         # find the transactions that have duplictes
-        resDuplicates = self.app.sqlite3.select({'query': '*', 'from': 'list_duplicates'})
+        resDuplicates = self.app.sqlite3.select({'query': '*', 'from': 'list_duplicate'})
         
         # loop trough the duplicates list to find the entries that where not imported.
         if len(resDuplicates):
@@ -118,7 +118,7 @@ class Duplicates(Controller):
             return
 
         # find our duplicate
-        duplicate = self.app.sqlite3.select({'query': '*', 'from': 'list_duplicates', 'where': f"id={id}" })
+        duplicate = self.app.sqlite3.select({'query': '*', 'from': 'list_duplicate', 'where': f"id={id}" })
 
         if len(duplicate) != 1:
             # There can be only one
@@ -135,7 +135,7 @@ class Duplicates(Controller):
         #
         qry={
             'query':  '*',
-            'from':   'transactions t',
+            'from':   'transaction t',
             'where':  f"account_id={duplicate['account_id']} AND date BETWEEN date('{duplicate['date']}','-1 day') AND date('{duplicate['date']}', '+1 day')",
             'clauses': {'order_by': 't.date, t.id desc'}  
         }
@@ -198,12 +198,12 @@ class Duplicates(Controller):
                 return 0        # number of rows affected
             
             # We're good.  Delete them all
-            rowsAffected =  self.app.sqlite3.delete('FROM duplicates')
-            rowsAffected += self.app.sqlite3.delete('FROM dup_entries')
+            rowsAffected =  self.app.sqlite3.delete('FROM duplicate')
+            rowsAffected += self.app.sqlite3.delete('FROM duplicate_entry')
 
         else: 
             # Figure out what to delete
-            qry={'query': 'duplicate_id', 'from': 'dup_entries', 'where': f'id={dup_id}'}
+            qry={'query': 'duplicate_id', 'from': 'duplicate_entry', 'where': f'id={dup_id}'}
             res = self.app.sqlite3.select(qry)
             
             if len(res) != 1:
@@ -225,9 +225,23 @@ class Duplicates(Controller):
                 return 0        # number of rows affected
             
             # We're good. Delete the single duplicate
-            pass
-                        
-        pass
+            self.app.sqlite3.delete(
+                {'from' : 'duplicate_entry', 
+                 'where': f'id={dup_id}'
+            })
+
+            # Check to see if we also need to delete the parent `duplicate'
+            res = self.app.sqlite3.select(
+                {'query': 'id', 
+                 'from' : 'duplicate_entry', 
+                 'where': f'duplicate_id={src_id}'})
+            if len(res) == 0:
+                # yes we also need to delete the parent
+                self.app.sqlite3.delete(
+                    {'from' : 'duplicate',
+                     'where': f'id={src_id}'}
+                )
+
 
     # ----------------------------------------------------------------------
     # imp | import: a duplicate or all  

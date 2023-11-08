@@ -123,7 +123,7 @@ class Csv(Controller):
     def _check_row(self, row):
         '''
         _check_row(row, rowNum): Check and fix the current row for known ATB csv issues.
-            1) date incorrect format: months and days<10 are sometimes
+            1) date incorrect format: month and days<10 are sometimes
                 not prefixed with a 0 and some files do m/d/y others do d/m/y
             2) Customer_Ref_Number (field:4) is sometimes preceded with a single (') without
                 a closing quote.
@@ -251,7 +251,7 @@ class Csv(Controller):
         where = f"account_id = {data['account_id']} AND date ='{data['date']}' AND amount={data['amount']} AND dc='{data['dc']}' AND balance={data['balance']}"
         qry={
             'query':    'id',
-            'from':     'transactions',
+            'from':     'transaction',
             'where':    where
         }
         res = self.app.sqlite3.select(qry)
@@ -260,19 +260,23 @@ class Csv(Controller):
             transaction_id = res[0]['id']
 
             # Let's see if this is a first or not
-            res = self.app.sqlite3.select({'query': 'id', 'from': 'duplicates', 'where': f'transaction_id={transaction_id}'})
+            res = self.app.sqlite3.select({'query': 'id', 'from': 'duplicate', 'where': f'transaction_id={transaction_id}'})
             if len(res) == 0:
                 # first time
-                if not self.app.sqlite3.insert({'into': 'duplicates', 'data': {'transaction_id': transaction_id }}):
+                if not self.app.sqlite3.insert({'into': 'duplicate', 'data': {'transaction_id': transaction_id }}):
                     raise ConnectionError
                 duplicate_id = self.app.sqlite3._cur.lastrowid
             else:
                 # not a first
                 duplicate_id = res[0]['id']
 
-            
+            # duplicate_entry has no account_id or month_id
+            del data['account_id']
+            del data['month_id']
+
+            # but we do need a duplicate_id
             data.update({'duplicate_id': duplicate_id})
-            if not self.app.sqlite3.insert({'into': 'dup_entries', 'data': data}):
+            if not self.app.sqlite3.insert({'into': 'duplicate_entry', 'data': data}):
                 raise ConnectionError
             
             return True
@@ -291,9 +295,9 @@ class Csv(Controller):
 
         # First split data in a couple of sets
 
-        # accounts
+        # account
         dataAcct = dict(zip(
-            list(self.app.sqlite3.models['accounts']['fields'].keys())[1:],
+            list(self.app.sqlite3._models['account']['fields'].keys())[1:],
             (
                 dataIn['account_number'][-4:],
                 f"{int(dataIn['account_rtn']):09}",     # Convert to 9 digits with leading 0
@@ -301,9 +305,9 @@ class Csv(Controller):
             )
         ))
 
-        # months
-        dataMonths = dict(zip(
-            list(self.app.sqlite3.models['months']['fields'].keys())[1:],
+        # month
+        dataMonth = dict(zip(
+            list(self.app.sqlite3._models['month']['fields'].keys())[1:],
             (
                 int(dataIn['date'][:4]),        # Year as an integer
                 int(dataIn['date'][5:7])        # Month as an integer
@@ -312,7 +316,7 @@ class Csv(Controller):
 
             
 
-        # transactions
+        # transaction
 
         # We don't want Debit and credit in a seperate cols
         amt = dataIn['debit_amount']; dc="D"
@@ -321,7 +325,7 @@ class Csv(Controller):
 
         datTrans = dict(zip(
             # Skip id, account_id, month_id, import_id and import_line for now
-            list(self.app.sqlite3.models['transactions']['fields'])[5:],  
+            list(self.app.sqlite3._models['transaction']['fields'])[5:],  
             (
                 dataIn['date'],
                 dataIn['transaction_type'],
@@ -335,12 +339,12 @@ class Csv(Controller):
         ))
 
         # Our data objects are almost ready
-        # First the accounts table
-        qry={'query': 'id, alias', 'from': 'accounts', 'where': f"alias LIKE '{dataAcct['alias']}'"}
+        # First the account table
+        qry={'query': 'id, alias', 'from': 'account', 'where': f"alias LIKE '{dataAcct['alias']}'"}
         ret = self.app.sqlite3.select(qry)
         if not len(ret):
             # This account is not in the db yet. 
-            self.app.sqlite3.insert({'into': 'accounts', 'data': dataAcct})
+            self.app.sqlite3.insert({'into': 'account', 'data': dataAcct})
 
             # Try again
             ret = self.app.sqlite3.select(qry)
@@ -355,12 +359,12 @@ class Csv(Controller):
         datTrans['account_id'] = ret['id']
 
         # Next we want to place the year-month in a different table to
-        # speed up searches on complete months.
-        qry={'query': '*', 'from': 'months', 'where': f"year={dataMonths['year']} and month={dataMonths['month']}"}
+        # speed up searches on complete month.
+        qry={'query': '*', 'from': 'month', 'where': f"year={dataMonth['year']} and month={dataMonth['month']}"}
         ret = self.app.sqlite3.select(qry)
         if not len(ret):
             # This year-date combo is not yet in the database
-            self.app.sqlite3.insert({'into': 'months', 'data': dataMonths})
+            self.app.sqlite3.insert({'into': 'month', 'data': dataMonth})
 
             # Try again
             ret = self.app.sqlite3.select(qry)
@@ -379,7 +383,7 @@ class Csv(Controller):
         # Before importing this row, check for duplicate.
         if not self._check_duplicate(datTrans):
             # All good, lets import
-            if self.app.sqlite3.insert({'into': 'transactions', 'data': datTrans}) == 1:
+            if self.app.sqlite3.insert({'into': 'transaction', 'data': datTrans}) == 1:
                 return True
         else:
             # not good, duplicate was inserted into duplicates table
@@ -399,7 +403,7 @@ class Csv(Controller):
     # import: import is a keyword that cannot be used as a method name  
     #
     @ex(
-            help='import transactions from an ATB csv file',
+            help='import transaction from an ATB csv file',
             label='import',
             aliases=['imp'],
             arguments=[(
@@ -410,7 +414,7 @@ class Csv(Controller):
             )]) 
     def ximport(self):
         '''
-        imp | import <csv_file>     import and check csv_file into the transactions table of the
+        imp | import <csv_file>     import and check csv_file into the transaction table of the
                                     database.  Any suspected duplicates will be stored in seperate
                                     tables for user review.
 
@@ -433,7 +437,7 @@ class Csv(Controller):
 
             # Log import action.
             importLog =  {
-                'into': 'imports',
+                'into': 'import',
                 'data': {
                     'source': csv_file
                 }
