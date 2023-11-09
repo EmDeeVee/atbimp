@@ -304,6 +304,10 @@ def test_atbimp_csv_imp_duplicates(TestAppDb):
 # --------------------------------------------------------------------
 # Duplicates
 #
+
+# ---------- list and show duplicates ------
+#
+
 @pytest.mark.argv(['dup', 'ls'])
 def test_atbimp_dup_ls(TestAppDb2Months):
     # List all duplicates found
@@ -391,7 +395,8 @@ def test_atbimp_del_confim_option_yes():
         app.run()
         assert app.exit_code == 0
 
-
+# ---------- Delete Duplicates ------
+#
 @pytest.mark.argv(['dup', 'delete', 'me', '--yes', '--brief'])
 def test_atbimp_dup_delete_wrong_id(TestAppDb2Months):
     assert TestAppDb2Months.exit_code == TestAppDb2Months.EC_PARAM_WRONG_FORMAT
@@ -435,6 +440,8 @@ def test_atbimp_dup_import_all(TestAppDb2Months):
 @pytest.mark.argv(['dup', 'import', '1'])
 def test_atbimp_dup_import_1(TestAppDb2Months):
     assert TestAppDb2Months.exit_code == TestAppDb2Months.EC_PARAM_WRONG_FORMAT
+
+
 
 # --------------------------------------------------------------------
 # Data

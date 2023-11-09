@@ -242,6 +242,15 @@ class Duplicates(Controller):
                      'where': f'id={src_id}'}
                 )
 
+        # Clean up any loose ends in import table
+        #
+        stmt="""FROM 'import' 
+                    WHERE 
+                        id not in (SELECT DISTINCT import_id FROM 'transaction') AND 
+                        id not in (SELECT DISTINCT import_id FROM 'duplicate_entry')
+                ;
+            """
+        self.app.sqlite3.delete(stmt)
 
     # ----------------------------------------------------------------------
     # imp | import: a duplicate or all  
