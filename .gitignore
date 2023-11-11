@@ -105,7 +105,7 @@ venv.bak/
 .mypy_cache/
 
 # data
-data/
+/data/
 **.db
 **.db3
 **.csv

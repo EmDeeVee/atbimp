@@ -24,7 +24,7 @@ class Data(Controller):
     ## ====================================================================
     ## Helper Functions
     ##
-    def _render_transactions(self, qry, account, month, range, date):
+    def _render_transactions(self, qry, account, options):
         # launch our query
         try:
             entries = self.app.sqlite3.select(qry)
@@ -32,7 +32,7 @@ class Data(Controller):
             raise ConnectionError
         
         # display the result
-        self.app.render({'entries': entries, 'account': account, 'month': month, 'range': range, 'date': date},'./data/entries.jinja2')
+        self.app.render({'entries': entries, 'account': account, 'options': options },'./data/entries.jinja2')
 
     ## ====================================================================
     ## Controller Code
@@ -47,24 +47,29 @@ class Data(Controller):
         aliases=['sh'],
         arguments=[
             (['-m'],{
-                'help': 'show data for month: YYYY-MM (example: -m 2022-04)',
+                'help':   'show data for month: YYYY-MM (example: -m 2022-04)',
                 'action': 'store',
-                'dest': 'month'
+                'dest':   'month'
             }),
             (['-r'],{
-                'help': 'show date range: <from>:<to> (example: -r 2022-01-01:2022-03-31)',
+                'help':   'show date range: <from>:<to> (example: -r 2022-01-01:2022-03-31)',
                 'action': 'store',
-                'dest': 'range'
+                'dest':   'range'
             }),
             (['-d'],{
-                'help': 'show transactions on date: YYYY-MM-DD (example: -r 2022-01-01:2022-03-31)',
+                'help':   'show transactions on date: YYYY-MM-DD (example: -r 2022-01-01:2022-03-31)',
                 'action': 'store',
-                'dest': 'date'
+                'dest':   'date'
             }),
             (['-a'],{
-                'help': 'select account: <alias>|<acct_number>|<nick_name>  (example: -a 1234)',
+                'help':   'select account: <alias>|<acct_number>|<nick_name>  (example: -a 1234)',
                 'action': 'store',
-                'dest': 'account'
+                'dest':   'account'
+            }),
+            (['-bw'],{
+                'help':   'display without color (b/w). usefull for printing. [default: False]',
+                'action': 'store_false',
+                'dest':   'color'
             })]
     )
     def show(self):
@@ -74,6 +79,8 @@ class Data(Controller):
         month = self.app.pargs.month
         range = self.app.pargs.range
         date  = self.app.pargs.date
+        color = self.app.pargs.color
+
         if month:
             if not re.fullmatch(r'\d{4}-\d{2}', month):
                 self.app.log.error(' Invalid month spec. Use: YYYY-MM')
@@ -90,12 +97,14 @@ class Data(Controller):
                 self.app.log.error(' Invalid date spec. Use: YYYY-MM-DD')
                 self.app.exit_code = self.app.EC_PARAM_WRONG_FORMAT
                 return 
-        # else:
-        #     self.app.log.error(' Must specify either -m MONTH or -r RANGE')
-        #     self.app.exit_code = self.app.EC_PARAM_MISSING
-        #     return 
 
         account = self.app.pargs.account
+        options = {
+            'color':    color,
+            'month':    month,
+            'date':     date,
+            'range':    range
+        }
 
         # get the contents of the accounts table.  We need this later
         #
@@ -148,7 +157,7 @@ class Data(Controller):
         # but we want to render the result seperately
         if account:
             # Account was specified, just go for it.
-            self._render_transactions(qry, accounts[acct_id-1], month, range, date)
+            self._render_transactions(qry, accounts[acct_id-1], options)
         else:
             # Now we have to figure out wich accounts we will get 
             # back from our query
@@ -168,7 +177,7 @@ class Data(Controller):
                     prefix = " AND "
                 acct_id=acct['account_id']
                 qry.update({'where': f"account_id={acct_id}{prefix}{where}"})
-                self._render_transactions(qry, accounts[acct_id-1], month, range, date)
+                self._render_transactions(qry, accounts[acct_id-1], options)
 
 
 
