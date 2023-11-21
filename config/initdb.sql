@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS "transaction" (
 	"month_id"	INTEGER,
 	"import_id"	INTEGER,
 	"import_line"	INTEGER,
+    "flag"          TEXT DEFAULT '', -- flag this rec.  D for duplicate
 	"date"	TEXT,
 	"transaction_type"	TEXT,
 	"customer_ref_number"	TEXT,

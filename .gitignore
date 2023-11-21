@@ -109,10 +109,17 @@ venv.bak/
 **.db
 **.db3
 **.csv
+# the .tcsv file are simply csv files that we use to build test data.
+# so yes we do want them in our repository.  .tcsv?!?  So what no spreadsheet
+# will ever get their hands on them.
 
 
 # vi and MacOs
 **.*~
 **.DS_Store
-transactions.db3
-tests/twomonths.db3.sql
+
+# Test and work data
+
+# the twomonths.db3.sql file, but not the one in the tests directory
+# we NEED that for testing.
+/twomonths.db3.sql

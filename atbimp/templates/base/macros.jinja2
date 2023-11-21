@@ -54,6 +54,10 @@
 {% if entry.id == highlight|int -%}
 {%    set ch = color('highlight1') -%}
 {% endif -%}
+{# entry.flag <str> Can be None due to the return of sqlite, wich will chocke the format filter -#}
+{% if entry.flag is not none -%}
+{{clr.red + "{:1s}".format(entry.flag) + clr.off -}}
+{% endif -%}
 {{bar}}{{ch}}{{entry.date}}{{bar}}{{"%-15s"|format(entry.transaction_type)}}{{bar}}{{"%-64s"|format(entry.description[:64])-}}
 {{bar}}{% if entry.dc == "C" %}{{ clr.green + "{:12,.2f}".format(entry.amount) + clr.off }}{{ch}}{% else %}            {% endif -%}
 {{bar}}{% if entry.dc == "D" %}{{ clr.red + "{:12,.2f}".format(entry.amount) + clr.off }}{{ch}}{% else %}            {% endif -%}

@@ -54,7 +54,7 @@ class Data(Controller):
             (['-r'],{
                 'help':   'show date range: <from>:<to> (example: -r 2022-01-01:2022-03-31)',
                 'action': 'store',
-                'dest':   'range'
+                'dest':   'range'  # range is reserved keyword
             }),
             (['-d'],{
                 'help':   'show transactions on date: YYYY-MM-DD (example: -r 2022-01-01:2022-03-31)',
@@ -103,7 +103,7 @@ class Data(Controller):
             'color':    color,
             'month':    month,
             'date':     date,
-            'range':    range
+            'rnge':     range        # range is reserved keyword. Will fail in template
         }
 
         # get the contents of the accounts table.  We need this later

@@ -14,11 +14,11 @@
             "justMyCode": false
         },
         {
-            "name": "atbimp -db twomonts.db3",
+            "name": "atbimp -db twomonts.db3 csv imp tests/twomonths1.tcsv",
             "type": "python",
             "request": "launch",
             "program": "env/bin/atbimp",
-            "args": "-db twomonths.db3",
+            "args": "-db twomonths.db3 csv imp tests/twomonths1.tcsv",
             "console": "integratedTerminal",
             "justMyCode": false
         },

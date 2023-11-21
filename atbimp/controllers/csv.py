@@ -271,13 +271,13 @@ class Csv(Controller):
                 duplicate_id = res[0]['id']
 
             # duplicate_entry has no account_id or month_id
-            del data['account_id']
-            del data['month_id']
+            # del data['account_id']
+            # del data['month_id']
 
             # but we do need a duplicate_id
-            data.update({'duplicate_id': duplicate_id})
-            if not self.app.sqlite3.insert({'into': 'duplicate_entry', 'data': data}):
-                raise ConnectionError
+            # data.update({'duplicate_id': duplicate_id})
+            # if not self.app.sqlite3.insert({'into': 'duplicate_entry', 'data': data}):
+            #     raise ConnectionError
             
             return True
             
@@ -324,8 +324,8 @@ class Csv(Controller):
             amt = dataIn['credit_amount']; dc="C"
 
         datTrans = dict(zip(
-            # Skip id, account_id, month_id, import_id and import_line for now
-            list(self.app.sqlite3._models['transaction']['fields'])[5:],  
+            # Skip id, account_id, month_id, import_id, import_line  and flag for now
+            list(self.app.sqlite3._models['transaction']['fields'])[6:],  
             (
                 dataIn['date'],
                 dataIn['transaction_type'],
@@ -381,14 +381,21 @@ class Csv(Controller):
         datTrans['import_line'] = self.chkreport['linesRead']
 
         # Before importing this row, check for duplicate.
-        if not self._check_duplicate(datTrans):
-            # All good, lets import
-            if self.app.sqlite3.insert({'into': 'transaction', 'data': datTrans}) == 1:
-                return True
-        else:
-            # not good, duplicate was inserted into duplicates table
+        if self._check_duplicate(datTrans):
+            datTrans['flag'] = 'D'
             self.chkreport['duplicatesFound'] += 1
-            self.chkreport['recordsImported'] -= 1  #  This one doesn't count
+        else:
+            datTrans['flag'] = ''
+
+        self.app.sqlite3.insert({'into': 'transaction', 'data': datTrans})            
+        # if not self._check_duplicate(datTrans):
+        #     # All good, lets import
+        #     if self.app.sqlite3.insert({'into': 'transaction', 'data': datTrans}) == 1:
+        #         return True
+        # else:
+        #     # not good, duplicate was inserted into duplicates table
+        #     self.chkreport['duplicatesFound'] += 1
+        #     self.chkreport['recordsImported'] -= 1  #  This one doesn't count
 
         # That's all there is to it.
         return True

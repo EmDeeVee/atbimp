@@ -17,16 +17,16 @@
 {# Start of the template 
 #}
          {{clr.bright}}Account :{{clr.off}} {{ account.acct_number }}({{ account.alias }}):{{ account.nick_name }}
- {{clr.bright}}Search Criteria :{{clr.off}} {% if month %}month - {{ month }}{% elif range %}range - {{ range }}{% elif date %}date - {{ date }}{% else %}None{% endif %}
+ {{clr.bright}}Search Criteria :{{clr.off}} {% if month %}month - {{ month }}{% elif range %}range - {{ rnge }}{% elif date %}date - {{ date }}{% else %}None{% endif %}
 
-{{ clr.bright -}}
-┏━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━┓
-┃  Date    ┃ Transact Type ┃                  Description                                   ┃   Credit   ┃   Debit    ┃  Balance   ┃
-┣━━━━━━━━━━╋━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━┫
+{{ clr.bright }}
+ ┏━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━┓
+ ┃  Date    ┃ Transact Type ┃                  Description                                   ┃   Credit   ┃   Debit    ┃  Balance   ┃
+ ┣━━━━━━━━━━╋━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━┫
 {{- clr.off }}
 {%- for entry in entries %}
 {{ transaction_entry(entry, colors=options.color) }}
-{%- endfor %}
-{{ clr.bright -}}
-┗━━━━━━━━━━┻━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━┻━━━━━━━━━━━━┻━━━━━━━━━━━━┛
+{%- endfor -%}
+{{ clr.bright }}
+ ┗━━━━━━━━━━┻━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━┻━━━━━━━━━━━━┻━━━━━━━━━━━━┛
 {{- clr.off}}
