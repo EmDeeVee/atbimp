@@ -31,6 +31,24 @@ class Data(Controller):
         except:
             raise ConnectionError
         
+        # Do we need to calculate delta?
+        if options['delta']:
+            delta = 0
+            for (i, entry) in enumerate(entries):
+                if i == 0:
+                    # first one
+                    prevBal = entry['balance']
+                    delta = 0.00
+                else:
+                    # subsequent ones
+                    factor = 1 if entry['dc'] == 'C' else -1
+                    calcBal = prevBal + (entry['amount'] * factor)
+                    delta = entry['balance'] - calcBal
+                    prevBal = entry['balance']
+
+                entries[i]['delta'] = delta
+
+
         # display the result
         self.app.render({'entries': entries, 'account': account, 'options': options },'./data/entries.jinja2')
 
@@ -67,9 +85,14 @@ class Data(Controller):
                 'dest':   'account'
             }),
             (['-bw'],{
-                'help':   'display without color (b/w). usefull for printing. [default: False]',
+                'help':   'display without color (b/w), usefull for printing. [default: Color]',
                 'action': 'store_false',
                 'dest':   'color'
+            }),
+            (['-D'],{
+                'help':   'calculate and display Delta of running balance. [default Off]',
+                'action': 'store_true',
+                'dest':   'delta'
             })]
     )
     def show(self):
@@ -80,6 +103,7 @@ class Data(Controller):
         range = self.app.pargs.range
         date  = self.app.pargs.date
         color = self.app.pargs.color
+        delta = self.app.pargs.delta
 
         if month:
             if not re.fullmatch(r'\d{4}-\d{2}', month):
@@ -103,7 +127,8 @@ class Data(Controller):
             'color':    color,
             'month':    month,
             'date':     date,
-            'rnge':     range        # range is reserved keyword. Will fail in template
+            'rnge':     range,        # range is reserved keyword. Will fail in template
+            'delta':    delta
         }
 
         # get the contents of the accounts table.  We need this later

@@ -26,7 +26,7 @@
     is determined by the parameters 
 
 #}
-{% macro transaction_entry(entry, colors=True, boxBar=True, highlight=None) -%}
+{% macro transaction_entry(entry, colors=True, boxBar=True, highlight=None, delta=False) -%}
 {%  if colors -%}
 {%   set clr = {
         "blue":         color('blue'),
@@ -61,7 +61,14 @@
 {{bar}}{{ch}}{{entry.date}}{{bar}}{{"%-15s"|format(entry.transaction_type)}}{{bar}}{{"%-64s"|format(entry.description[:64])-}}
 {{bar}}{% if entry.dc == "C" %}{{ clr.green + "{:12,.2f}".format(entry.amount) + clr.off }}{{ch}}{% else %}            {% endif -%}
 {{bar}}{% if entry.dc == "D" %}{{ clr.red + "{:12,.2f}".format(entry.amount) + clr.off }}{{ch}}{% else %}            {% endif -%}
-{{bar}}{{ clr.blue + "{:12,.2f}".format(entry.balance) + clr.off }}{{ch}}{{bar}}{{clr.off}}
+{{bar}}{{ clr.blue + "{:12,.2f}".format(entry.balance) + clr.off }}{{ch}}{{bar}}{{clr.off -}}
+{% if delta and (entry.delta|float >= 0.01 and entry.delta|float <= -0.01 )  -%}
+{%   if entry.delta < 0 -%}
+{{ clr.red  + "{:12,.2f}".format(entry.delta) + clr.off -}}
+{%   else -%}
+{{ clr.green + "{:+12,.2f}".format(entry.delta) + clr.off -}}
+{%   endif -%}
+{% endif %}
 {%- endmacro %}
 {# 
     Macro to display duplicate entry
