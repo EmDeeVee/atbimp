@@ -85,9 +85,14 @@ class Data(Controller):
                 'dest':   'account'
             }),
             (['-bw'],{
-                'help':   'display without color (b/w), usefull for printing. [default: Color]',
+                'help':   '(b/w): display without color, usefull for printing. [default: Color]',
                 'action': 'store_false',
                 'dest':   'color'
+            }),
+            (['-nb'],{
+                'help':   'display without box bars. [default: box bars]',
+                'action': 'store_false',
+                'dest':   'bars'
             }),
             (['-D'],{
                 'help':   'calculate and display Delta of running balance. [default Off]',
@@ -99,37 +104,32 @@ class Data(Controller):
         '''
         sh | show   month|range
         '''
-        month = self.app.pargs.month
-        range = self.app.pargs.range
-        date  = self.app.pargs.date
-        color = self.app.pargs.color
-        delta = self.app.pargs.delta
+        options = {
+            'color':    self.app.pargs.color,
+            'bars':     self.app.pargs.bars,
+            'month':    self.app.pargs.month,
+            'date':     self.app.pargs.date,
+            'rnge':     self.app.pargs.range,        # range is reserved keyword. Will fail in template
+            'delta':    self.app.pargs.delta,
+            'account':  self.app.pargs.account
+        }
 
-        if month:
-            if not re.fullmatch(r'\d{4}-\d{2}', month):
+        if options['month']:
+            if not re.fullmatch(r'\d{4}-\d{2}', options['month']):
                 self.app.log.error(' Invalid month spec. Use: YYYY-MM')
                 self.app.exit_code = self.app.EC_PARAM_WRONG_FORMAT
                 return 
-        elif range:
-            rng = rng=re.fullmatch(r'(?P<from>\d{4}-\d{2}-\d{2}):(?P<to>\d{4}-\d{2}-\d{2})', range )
+        elif options['rnge']:
+            rng = rng=re.fullmatch(r'(?P<from>\d{4}-\d{2}-\d{2}):(?P<to>\d{4}-\d{2}-\d{2})', options['range'] )
             if not rng:
                 self.app.log.error(' Invalid range spec. Use <from>:<to> YYYY-MM-DD:YYYY-MM-DD')
                 self.app.exit_code = self.app.EC_PARAM_WRONG_FORMAT
                 return 
-        elif date:
-            if not re.fullmatch(r'\d{4}-\d{2}-\d{2}', date):
+        elif options['date']:
+            if not re.fullmatch(r'\d{4}-\d{2}-\d{2}', options['date']):
                 self.app.log.error(' Invalid date spec. Use: YYYY-MM-DD')
                 self.app.exit_code = self.app.EC_PARAM_WRONG_FORMAT
                 return 
-
-        account = self.app.pargs.account
-        options = {
-            'color':    color,
-            'month':    month,
-            'date':     date,
-            'rnge':     range,        # range is reserved keyword. Will fail in template
-            'delta':    delta
-        }
 
         # get the contents of the accounts table.  We need this later
         #
@@ -140,12 +140,12 @@ class Data(Controller):
 
         prefix = ""
         where = ""
-        if account:
+        if options['account']:
             # Lookup our account id
             qry={
                 'query': '*',
                 'from':  'account',
-                'where': f"alias='%{account}%' OR acct_number LIKE '%{account}%' OR nick_name LIKE '%{account}%';"
+                'where': f"alias='%{options['account']}%' OR acct_number LIKE '%{options['account']}%' OR nick_name LIKE '%{options['account']}%';"
             }
             try:
                 res = self.app.sqlite3.select(qry)
@@ -167,20 +167,20 @@ class Data(Controller):
             'clauses': {'order_by': 't.date, t.id desc'}
         }
         # Add account number, if any, into the mix
-        if account:
+        if options['account']:
             prefix = " AND "
 
-        if month:
-            where += f"{prefix}date LIKE '{month}-%'"
-        elif range:
+        if options['month']:
+            where += f"{prefix}date LIKE '{options['month']}-%'"
+        elif options['rnge']:
             where += f"{prefix}date BETWEEN '{rng.group('from')}' AND '{rng.group('to')}'"
-        elif date:
-            where += f"{prefix}date = '{date}'"
+        elif options['date']:
+            where += f"{prefix}date = '{options['date']}'"
 
         qry.update({'where': where})
         # We could be requested to display results over multiple accounts. 
         # but we want to render the result seperately
-        if account:
+        if options['account']:
             # Account was specified, just go for it.
             self._render_transactions(qry, accounts[acct_id-1], options)
         else:
@@ -197,6 +197,7 @@ class Data(Controller):
             except:
                 raise ConnectionError
             
+            # BUG:  Crashes on empty database.
             for acct in res:
                 if len(where):
                     prefix = " AND "

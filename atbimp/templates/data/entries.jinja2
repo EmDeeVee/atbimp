@@ -14,19 +14,19 @@
 {%- else -%}
 {%     set clr = {"blue": "", "red": "", "green": "", "off": "", "bright": ""} -%}
 {%  endif -%}
+{% if options.bars %}{% set bar = '┃' %}{% else %}{% set bar = ' '%}{% endif -%}
 {# Start of the template 
 #}
          {{clr.bright}}Account :{{clr.off}} {{ account.acct_number }}({{ account.alias }}):{{ account.nick_name }}
  {{clr.bright}}Search Criteria :{{clr.off}} {% if month %}month - {{ month }}{% elif range %}range - {{ rnge }}{% elif date %}date - {{ date }}{% else %}None{% endif %}
 
 {{ clr.bright }}
- ┏━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━┓
- ┃  Date    ┃ Transact Type ┃                  Description                                   ┃   Credit   ┃   Debit    ┃  Balance   ┃
- ┣━━━━━━━━━━╋━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━┫
+{% if options.bars %} ┏━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━┓{% endif %}
+ {{bar}}  Date    {{bar}} Transact Type {{bar}} Description                                                    {{bar}}     Credit {{bar}}      Debit {{bar}}    Balance {{bar}}
+{% if options.bars %} ┣━━━━━━━━━━╋━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━┫{% endif -%}
 {{- clr.off }}
 {%- for entry in entries %}
-{{ transaction_entry(entry, colors=options.color, delta=options.delta) }}
-{%- endfor -%}
-{{ clr.bright }}
- ┗━━━━━━━━━━┻━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━┻━━━━━━━━━━━━┻━━━━━━━━━━━━┛
-{{- clr.off}}
+{{ transaction_entry(entry, colors=options.color, delta=options.delta, boxBar=options.bars) }}
+{%- endfor %}
+{% if options.bars %}{{ clr.bright }} ┗━━━━━━━━━━┻━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━┻━━━━━━━━━━━━┻━━━━━━━━━━━━┛{{ clr.off }}{% endif %}
+

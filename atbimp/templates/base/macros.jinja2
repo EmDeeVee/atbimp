@@ -62,7 +62,7 @@
 {{bar}}{% if entry.dc == "D" %}{{ clr.red + "{:12,.2f}".format(entry.amount) + clr.off }}{{ch}}{% else %}            {% endif -%}
 {{bar}}{{ clr.blue + "{:12,.2f}".format(entry.balance) + clr.off }}{{ch}}{{bar}}{{clr.off -}}
 {# Display delta if any -#}
-{% if delta and (entry.delta|float >= 0.01 and entry.delta|float <= -0.01 )  -%}
+{% if delta and (entry.delta|float >= 0.01 or entry.delta|float <= -0.01 )  -%}
 {%   if entry.delta < 0 -%}
 {{ clr.red  + "{:12,.2f}".format(entry.delta) + clr.off -}}
 {%   else -%}
