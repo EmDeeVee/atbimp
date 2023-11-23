@@ -4,6 +4,9 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
+
+
         {
             "name": "atbimp no args",
             "type": "python",
@@ -14,11 +17,20 @@
             "justMyCode": false
         },
         {
-            "name": "atbimp -db twomonts.db3 csv imp tests/twomonths1.tcsv",
+            "name": "atbimp -db twomonths.db3 csv imp tests/twomonths1.tcsv",
             "type": "python",
             "request": "launch",
             "program": "env/bin/atbimp",
             "args": "-db twomonths.db3 csv imp tests/twomonths1.tcsv",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "atbimp -db twomonths.db3 data show -m 2022-11 -D -nb",
+            "type": "python",
+            "request": "launch",
+            "program": "env/bin/atbimp",
+            "args": "-db twomonths.db3 data show -m 2022-11 -D -nb",
             "console": "integratedTerminal",
             "justMyCode": false
         },
