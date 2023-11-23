@@ -121,7 +121,7 @@ class Data(Controller):
                 self.app.exit_code = self.app.EC_PARAM_WRONG_FORMAT
                 return 
         elif options['rnge']:
-            rng = rng=re.fullmatch(r'(?P<from>\d{4}-\d{2}-\d{2}):(?P<to>\d{4}-\d{2}-\d{2})', options['range'] )
+            rng = rng=re.fullmatch(r'(?P<from>\d{4}-\d{2}-\d{2}):(?P<to>\d{4}-\d{2}-\d{2})', options['rnge'] )
             if not rng:
                 self.app.log.error(' Invalid range spec. Use <from>:<to> YYYY-MM-DD:YYYY-MM-DD')
                 self.app.exit_code = self.app.EC_PARAM_WRONG_FORMAT

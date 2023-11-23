@@ -288,7 +288,7 @@ class Csv(Controller):
     # _import_transaction():  Import transaction into database
     #
     @ex(hide=True)
-    def _import_transaction(self, row, importRowId):
+    def _import_transaction(self, row, import_id):
 
         # Make a dict of our row
         dataIn = dict(zip(self.app.config.get(self.app.label,'exp_tbl_cols'),row))
@@ -369,7 +369,7 @@ class Csv(Controller):
 
         # completing the datTrans object values
         datTrans['month_id'] = ret['id']
-        datTrans['import_id'] = importRowId
+        datTrans['import_id'] = import_id
         datTrans['import_line'] = self.chkreport['linesRead']
 
         # Before importing this row, check for duplicate.
@@ -380,15 +380,7 @@ class Csv(Controller):
             self.chkreport['duplicatesFound'] += 1
 
         self.app.sqlite3.insert({'into': 'transaction', 'data': datTrans})            
-        # if not self._check_duplicate(datTrans):
-        #     # All good, lets import
-        #     if self.app.sqlite3.insert({'into': 'transaction', 'data': datTrans}) == 1:
-        #         return True
-        # else:
-        #     # not good, duplicate was inserted into duplicates table
-        #     self.chkreport['duplicatesFound'] += 1
-        #     self.chkreport['recordsImported'] -= 1  #  This one doesn't count
-
+   
         # That's all there is to it.
         return True
             
@@ -442,13 +434,13 @@ class Csv(Controller):
                 }
             }
             self.app.sqlite3.insert(importLog)
-            impRowId = self.app.sqlite3._cur.lastrowid
+            import_id = self.app.sqlite3._cur.lastrowid
 
 
             # Go trough the motions
             while not row is None:
                 self._check_row(row) ; self.chkreport["dataLinesFound"]+=1
-                if self._import_transaction(row, impRowId):
+                if self._import_transaction(row, import_id):
                     self.chkreport["recordsImported"]+=1
                 else:
                     self.chkreport["sqlInsertErrors"]+=1
@@ -464,6 +456,13 @@ class Csv(Controller):
             data = {}
             data["report"] = self.chkreport
             self.app.render(data, 'csv/report.jinja2')
+            
+            # Save the report for later
+            #
+            self.chkreport.pop('fileChecked')
+            self.chkreport.pop('fileExported')
+
+            # TODO: Need ext_sqlite.update()            
 
         else:
             self.app.exit_code = self.app.EC_FILE_NOT_FOUND
