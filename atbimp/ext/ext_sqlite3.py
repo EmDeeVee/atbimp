@@ -540,14 +540,6 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
             # query as dict.  A bit more work
             stmt = f"SELECT {query['query']}"
             if 'from' in query and len(query['from']):
-                # from section
-                # if type(query['from']) == str:
-                #     stmt += f" FROM '{query['from']}'"
-                # elif type(query['from']) == tuple or type(query['from']) == list:
-                #     lst = "','".join(query['from'])
-                #     stmt += f" FROM '{lst}'"
-                # else:
-                #     raise ValueError
                 stmt += f" FROM {self._escape_from(query['from'])}"
                 
             if 'where' in query and len(query['where']):
@@ -700,13 +692,78 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
 
         return self._cur.rowcount        
 
+    def update(self,update):
+        '''
+        update()            Update statment
         
+        parameters:         update {string|dict}
+                                {string}    with the update statment, optinally requires the update
+                                            operation keywords like OR ABORT, OR FAIL, OR ROLLBACK
+                                            eg:)
+                                                sqlite.update('test SET txt='not available')
+                                                sqlite.update('test OR ABORT SET price=100 WHERE id=1)
+                                            
+                                {dict}      dict in the form:
+                                            {
+                                                'update':   <string> with table name
+                                                'set':      <string|dict> containing the values to be updated
+                                                'where':    <string> with where clause
+                                            }
+                                            eg:)
+                                                sqlite.update({'update': 'test', 'set': "txt='not available"})
+                                                sqlite.update({'update': 'test', 'set': 'price=100', 'where': 'id=1})
+                                                update = {
+                                                    'update': 'test',
+                                                    'set':    {'price': 49.90, 'txt': 'Discounted!'},
+                                                    'where':  'price=99.25'
+                                                }
+        Returns:
+            rows affected
+
+        Raises:
+            ValueError:         dict in improper format
+            ConnectionError:    Error in statement.
+
+        '''
+        if type(update) == str:
+            stmt = f"UPDATE {update}"
+        elif type(update) == dict:
+            stmt = f"UPDATE '{update['update']}'"
+            if type(update['set']) == str:
+                stmt += f" SET {update['set']}"
+            elif type(update['set']) == dict:
+                setLst=[]
+                for itm in list(zip(update['set'].keys(),update['set'].values())):
+                    setLst.append(f"{itm[0]}='{itm[1]}'")
+                    
+                stmt += " SET " + ", ".join(setLst)
+            else:
+                raise ValueError
+            
+            if type(update['where']) == str:
+                stmt += f" WHERE {update['where']}"
+            else:
+                raise ValueError
+            
+        else:
+            raise ValueError
+        
+        # Execute the query
+        try:
+            self._cur.execute(stmt)
+            self._con.commit()
+        except:
+            raise ConnectionError
+
+        return self._cur.rowcount        
+        
+                                                
     def delete(self,delete):
         '''
         delete()            Delete statment.
 
         parameters:     delete {string|dict}
-                            {string}    with the delete clause, optionally reqiueres the delete 
+                            {string}    with the delete clause, optionally requieres the delete 
                                         operation keywords like FROM, WHERE, ORDER BY or LIMIT.
                                         eg:)
                                             sqlite3.delete('FROM test'))
@@ -735,7 +792,6 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         Raises:
             ValueError:         dict in improper format
             ConnectionError:    Error in statement.
-
 
         '''
         if type(delete) == str:

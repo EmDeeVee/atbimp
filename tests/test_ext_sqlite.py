@@ -383,6 +383,67 @@ def test_ext_sqlite_insert_multiple_as_dict_with_empty_value(TestApp: AtbImpAppT
     }
     rowsAffected = TestApp.sqlite3.insert(ins)
     assert rowsAffected == 4
+# ---------------------------------------------------------------
+# Update
+#
+@pytest.mark.argv(['--debug'])
+def test_ext_sqlite_update_as_str(TestApp: AtbImpAppTest):
+    # Test update statment as a string
+    TestApp.sqlite3.create_model(sqlite_create_test_model())
+    
+    # We need to insert something before we can update
+    rowsAffected = TestApp.sqlite3.insert("INTO test(date, txt, price) VALUES (CURRENT_DATE, 'test', 99.25)")
+    # now update the first (and only record)
+    rowsAffected = TestApp.sqlite3.update("test SET price=100.00 WHERE id=1")
+    # search back for assertion
+    res = TestApp.sqlite3.select('* FROM test WHERE id=1')
+    
+    assert rowsAffected == 1
+    assert res[0]['price'] == 100.00
+    
+@pytest.mark.argv(['--debug'])
+def test_ext_sqlite_update_as_dict_set_as_str(TestApp: AtbImpAppTest):
+    # Test update statment as a string
+    TestApp.sqlite3.create_model(sqlite_create_test_model())
+    
+    # We need to insert something before we can update
+    TestApp.sqlite3.insert("INTO test(date, txt, price) VALUES (CURRENT_DATE, 'test', 99.25)")
+
+    # now update the first (and only record)
+    rowsAffected = TestApp.sqlite3.update({
+        'update':   'test',
+        'set':      'price=100.00',
+        'where':    'id=1'
+    })
+    # search back for assertion
+    res = TestApp.sqlite3.select('* FROM test WHERE id=1')
+    
+    assert rowsAffected == 1
+    assert res[0]['price'] == 100.00
+
+@pytest.mark.argv(['--debug'])    
+def test_ext_sqlite_update_as_dict_set_as_dict(TestApp: AtbImpAppTest):
+    # Test update statment as a string
+    TestApp.sqlite3.create_model(sqlite_create_test_model())
+    
+    # We need to insert something before we can update
+    TestApp.sqlite3.insert("INTO test(date, txt, price) VALUES (CURRENT_DATE, 'apple', 1.25)")
+    TestApp.sqlite3.insert("INTO test(date, txt, price) VALUES (CURRENT_DATE, 'pear', 1.35)")
+    TestApp.sqlite3.insert("INTO test(date, txt, price) VALUES (CURRENT_DATE, 'banana', 2.25)")
+
+    # now update the two records (and only record)
+    rowsAffected = TestApp.sqlite3.update({
+        'update':   'test',
+        'set':      {'price': 1, 'txt': 'Fruit on sale!'},
+        'where':    "txt='apple' OR txt='pear'"
+    })
+    # search back for assertion
+    res = TestApp.sqlite3.select('* FROM test WHERE price=1')
+    
+    assert rowsAffected == 2
+    assert res[0]['price'] == 1
+    assert res[1]['price'] == 1
+    
 
 # ---------------------------------------------------------------
 # Delete
