@@ -114,6 +114,7 @@ class Data(Controller):
             'account':  self.app.pargs.account
         }
 
+        # sanity checks
         if options['month']:
             if not re.fullmatch(r'\d{4}-\d{2}', options['month']):
                 self.app.log.error(' Invalid month spec. Use: YYYY-MM')
@@ -166,18 +167,34 @@ class Data(Controller):
             'from': 'transaction t',
             'clauses': {'order_by': 't.date, t.id desc'}
         }
+        
         # Add account number, if any, into the mix
         if options['account']:
             prefix = " AND "
 
         if options['month']:
-            where += f"{prefix}date LIKE '{options['month']}-%'"
+            # Use the month table to speedup queries.
+            # isn't that where we designed it for?
+            monQry={
+                'query': 'id',
+                'from':  'month m',
+                'where': f"m.month='{options['month']}'"
+            }
+            res = self.app.sqlite3.select(monQry)
+            if len(res):
+                # We only want the first one
+                where += f"{prefix}month_id={res[0]['id']}"
+                prefix = " AND "
+                
         elif options['rnge']:
             where += f"{prefix}date BETWEEN '{rng.group('from')}' AND '{rng.group('to')}'"
+            prefix = " AND "
+            
         elif options['date']:
             where += f"{prefix}date = '{options['date']}'"
 
         qry.update({'where': where})
+        
         # We could be requested to display results over multiple accounts. 
         # but we want to render the result seperately
         if options['account']:

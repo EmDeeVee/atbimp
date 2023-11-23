@@ -306,15 +306,7 @@ class Csv(Controller):
         ))
 
         # month
-        dataMonth = dict(zip(
-            list(self.app.sqlite3._models['month']['fields'].keys())[1:],
-            (
-                int(dataIn['date'][:4]),        # Year as an integer
-                int(dataIn['date'][5:7])        # Month as an integer
-            )
-        ))
-
-            
+        dataMonth = { 'month': dataIn['date'][:7] }
 
         # transaction
 
@@ -360,7 +352,7 @@ class Csv(Controller):
 
         # Next we want to place the year-month in a different table to
         # speed up searches on complete month.
-        qry={'query': '*', 'from': 'month', 'where': f"year={dataMonth['year']} and month={dataMonth['month']}"}
+        qry={'query': 'id', 'from': 'month m', 'where': f"m.month = '{dataMonth['month']}'"}
         ret = self.app.sqlite3.select(qry)
         if not len(ret):
             # This year-date combo is not yet in the database
