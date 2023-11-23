@@ -79,7 +79,7 @@ def TestAppDb(request):
 
 @pytest.fixture
 def TestAppDb2Months(request):
-    # A testapp that runs on twomonts.db3.  We have to pre-populate
+    # A testapp that runs on twomonths.db3.  We have to pre-populate
     # this database with data, so we can use this as a fixture for our
     # tests.
     #
@@ -93,7 +93,7 @@ def TestAppDb2Months(request):
         app.run()
         yield app
 
-        destroy_tmpdb('./tests/twomonths.db3.sql')
+    destroy_tmpdb('./tests/twomonths.db3.sql')
 
 
 # ====================================================================
@@ -114,11 +114,16 @@ def test_atbimp_ext_sqlite(TestAppArgs):
     dbfile = os.path.basename(TestAppArgs.sqlite3.dbfile())
     assert dbfile == 'transactions.db3'
 
-@pytest.mark.argv(['-db', 'twomonths.db3'])
+@pytest.mark.argv(['-db', './tests/twomonths.db3'])
 def test_atbimp_ext_sqlite_db_file(TestAppArgs):
     # test that sqlite extension is functional
     dbfile = os.path.basename(TestAppArgs.sqlite3.dbfile())
     assert dbfile == 'twomonths.db3'
+    
+    # Still have to delete it once the test was successfull
+    # we (ab)use destro_tmpdb() for this, even though we did
+    # not create it with its peer create_tmpdb()
+    destroy_tmpdb('./tests/twomonths.db3.sql')  # No, the `.sql' is not an typo
 
 # --------------------------------------------------------------------
 # Csv
