@@ -8,6 +8,7 @@ from .controllers.base import Base
 from .controllers.csv import Csv
 from .controllers.duplicates import Duplicates
 from .controllers.data import Data
+from .controllers.imports import Imports
 from cement import minimal_logger
 
 LOG = minimal_logger(__name__)
@@ -89,7 +90,8 @@ class AtbImpApp(App):
             Base,
             Csv,
             Duplicates,
-            Data
+            Data,
+            Imports
         ]
 
         # hooks

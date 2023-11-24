@@ -1,6 +1,5 @@
 {#
     Macro to use ANSI escape colors
-
 #}
 {%  macro color(colorName) -%}
 {%  if colorName == 'blue' -%}
@@ -72,7 +71,7 @@
 {%- endmacro %}
 {# 
     Macro to display duplicate entry
- #}
+#}
 {% macro duplicate_entry(row, highlight=None) %}
 {# first the source entry#}
 {{ color('green')+color('bright') }}[{{row.entry.id}}]: →  → {{row.entry.date}} {{"%-15s"|format(row.entry.transaction_type)}} {{"%-45s"|format(row.entry.description[:45])}} {{"%8.2f"|format(row.entry.amount)}}:{{row.entry.dc}} {{"%8.2f"|format(row.entry.balance)}}:B{{ color('off') }}

@@ -20,11 +20,22 @@ INSERT INTO account VALUES(2,'7890','021907339','000555557890','Business');
 CREATE TABLE IF NOT EXISTS "import" (
 	"id"	INTEGER NOT NULL,
 	"time_stamp"	TEXT DEFAULT CURRENT_TIMESTAMP,
-	"source"	TEXT,
+	"source"	TEXT NOT NULL DEFAULT '',
+    "linesRead"         INTEGER NOT NULL DEFAULT 0,       -- Total number of lines in the file
+    "dataLinesFound"    INTEGER NOT NULL DEFAULT 0,       -- Total number of data lines found
+    "incorrectDate"     INTEGER NOT NULL DEFAULT 0,       -- Total number of lines with incorrect date
+	"leadingQuote"      INTEGER NOT NULL DEFAULT 0,       -- Total number of lines with a leading quote
+    "trailingComma"     INTEGER NOT NULL DEFAULT 0,       -- Total number of lines with a trailing comma
+    "singleQuote"       INTEGER NOT NULL DEFAULT 0,       -- Total number of lines containing a single quote in text
+    "totalErrors"       INTEGER NOT NULL DEFAULT 0,       -- Total number of errors found
+    "recordsImported"   INTEGER NOT NULL DEFAULT 0,       -- Total number of records imported.
+    "recordsExported"   INTEGER NOT NULL DEFAULT 0,       -- Total number of records exported.
+    "sqlInsertErrors"   INTEGER NOT NULL DEFAULT 0,       -- Total number of Sql Insert Errorrs.
+    "duplicatesFound"   INTEGER NOT NULL DEFAULT 0,       -- Total number of duplicates found.
 	PRIMARY KEY("id" AUTOINCREMENT)
 );
-INSERT INTO import VALUES(1,'2023-11-23 16:00:03','tests/twomonths1.tcsv');
-INSERT INTO import VALUES(2,'2023-11-23 16:04:22','tests/twomonths2.tcsv');
+INSERT INTO import VALUES(1,'2023-11-24 02:08:22','tests/twomonths1.tcsv',117,117,0,0,0,17,17,117,0,0,0);
+INSERT INTO import VALUES(2,'2023-11-24 02:09:29','tests/twomonths2.tcsv',3,3,0,0,0,0,0,3,0,0,0);
 CREATE TABLE IF NOT EXISTS "transaction" (
 	"id"	INTEGER NOT NULL,
 	"account_id"	INTEGER,
