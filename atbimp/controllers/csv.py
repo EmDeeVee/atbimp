@@ -457,12 +457,18 @@ class Csv(Controller):
             data["report"] = self.chkreport
             self.app.render(data, 'csv/report.jinja2')
             
-            # Save the report for later
+            # place our report into the database.
             #
-            self.chkreport.pop('fileChecked')
-            self.chkreport.pop('fileExported')
-
-            # TODO: Need ext_sqlite.update()            
+            set = self.chkreport
+            set.pop('fileChecked')         # Already covered by source
+            set.pop('fileExported')        # This was an import, not an export
+            
+            updStmt = {
+                'update':   'import',
+                'set':      set,
+                'where':    f"id={import_id}"
+            }
+            self.app.sqlite3.update(updStmt)
 
         else:
             self.app.exit_code = self.app.EC_FILE_NOT_FOUND

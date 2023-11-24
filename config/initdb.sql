@@ -19,7 +19,18 @@ DROP TABLE IF EXISTS "import";
 CREATE TABLE IF NOT EXISTS "import" (
 	"id"	INTEGER NOT NULL,
 	"time_stamp"	TEXT DEFAULT CURRENT_TIMESTAMP,
-	"source"	TEXT,
+	"source"	TEXT NOT NULL DEFAULT '',
+    "linesRead"         INTEGER NOT NULL DEFAULT 0,       -- Total number of lines in the file
+    "dataLinesFound"    INTEGER NOT NULL DEFAULT 0,       -- Total number of data lines found
+    "incorrectDate"     INTEGER NOT NULL DEFAULT 0,       -- Total number of lines with incorrect date
+	"leadingQuote"      INTEGER NOT NULL DEFAULT 0,       -- Total number of lines with a leading quote
+    "trailingComma"     INTEGER NOT NULL DEFAULT 0,       -- Total number of lines with a trailing comma
+    "singleQuote"       INTEGER NOT NULL DEFAULT 0,       -- Total number of lines containing a single quote in text
+    "totalErrors"       INTEGER NOT NULL DEFAULT 0,       -- Total number of errors found
+    "recordsImported"   INTEGER NOT NULL DEFAULT 0,       -- Total number of records imported.
+    "recordsExported"   INTEGER NOT NULL DEFAULT 0,       -- Total number of records exported.
+    "sqlInsertErrors"   INTEGER NOT NULL DEFAULT 0,       -- Total number of Sql Insert Errorrs.
+    "duplicatesFound"   INTEGER NOT NULL DEFAULT 0,       -- Total number of duplicates found.
 	PRIMARY KEY("id" AUTOINCREMENT)
 );
 DROP TABLE IF EXISTS "transaction";
