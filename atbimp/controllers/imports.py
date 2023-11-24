@@ -42,10 +42,42 @@ class Imports(Controller):
         help = 'show details of a specific import',
         aliases = ['sh'],
         arguments=[
-                (['id'],{
+                (['import_id'],{
                 'help':   'import id to show',
                 'action': 'store',
+                'default': 'all'
             })]
     )
-    def show(self):
-        pass
+    def show(self, id=None):
+        if not id:
+            import_id = self.app.pargs.import_id
+
+        if import_id == 'all':
+            # that's the list
+            self.list()
+            return
+        
+        # Get the data sets, first import
+        res = self.app.sqlite3.select({
+            'query':    "id, time_stamp, source",
+            'from':     'import',
+            'where':    f"id={import_id}",
+        })
+        if len(res) == 0:
+            print(f'Import id: {import_id} not found')
+            return False
+
+        imp = res[0]
+
+        # Get the report
+        res = self.app.sqlite3.select({
+            'query':    "source as fileChecked, 'n/a' as fileExported, linesRead, dataLinesFound, incorrectDate, leadingQuote, trailingComma, singleQuote, totalErrors, recordsImported, recordsExported, sqlInsertErrors, duplicatesFound",
+            'from':     'import',
+            'where':    f"id={import_id}",
+        })
+        report = res[0]
+
+        self.app.render({
+            'import': imp,
+            'report': report,
+        }, './imports/show.jinja2')

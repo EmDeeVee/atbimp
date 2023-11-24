@@ -100,7 +100,6 @@ class Duplicates(Controller):
             arguments=[(['src_id'],{
                 'help': "the source id of the duplicate. (displayed by 'list' in square brackets [src_id])",
                 'action': 'store',
-                # 'dest': 'id'
             })]
     )
     def show(self,id=None, dup2highlight=None):

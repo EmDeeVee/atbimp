@@ -496,3 +496,8 @@ def test_atbimp_data_show_date_one_account(TestAppDb2Months):
 @pytest.mark.argv(['imports','list'])
 def test_atbimp_imports_list(TestAppDb2Months):
     assert TestAppDb2Months.exit_code == 0
+
+@pytest.mark.argv(['imports','show', '1'])
+def test_atbimp_imports_show_1(TestAppDb2Months):
+    assert TestAppDb2Months.exit_code == 0
+    
