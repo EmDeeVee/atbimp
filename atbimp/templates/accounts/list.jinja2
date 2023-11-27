@@ -1,0 +1,8 @@
+===============================================================
+  id      account      alias   routing     nick name
+===============================================================
+{% for account in accounts -%}
+{{ "%4d: "|format(account.id)}}{{"%16s "|format(account.acct_number) -}}
+    ({{- "%4s"|format(account.alias)}}) {{"%10s : "|format(account.acct_routing) -}}
+    {{- account.nick_name }}
+{% endfor %}

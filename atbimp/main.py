@@ -8,6 +8,7 @@ from .controllers.base import Base
 from .controllers.csv import Csv
 from .controllers.data import Data
 from .controllers.imports import Imports
+from .controllers.accounts import Accounts
 from cement import minimal_logger
 
 LOG = minimal_logger(__name__)
@@ -89,6 +90,7 @@ class AtbImpApp(App):
             Base,
             Csv,
             Data,
+            Accounts,
             Imports
         ]
 
@@ -106,6 +108,7 @@ class AtbImpApp(App):
     EC_RECORD_NOT_FOUND = 131
     EC_CONFIRMATION_CANCEL = 132
     EC_IMPORT_ID_NOT_FOUND = 133
+    EC_ACCOUNT_NOT_FOUND = 134
 
     def setupdb(self):
         # Figure out our db file and let sqlite3 know
