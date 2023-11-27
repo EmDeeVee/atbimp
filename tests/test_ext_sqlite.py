@@ -47,10 +47,39 @@ def sqlite_create_test_model(ord=0):
             "'id' INTEGER PRIMARY KEY AUTOINCREMENT",
             "'date' DATE",
             "'txt' TEXT",
-            "'price' DECIMAL(10,2)"
+            "'price' DECIMAL(10,2)",
+            "'store_id' INTEGER",
+            "'region_id' INTEGER"
         ]
     }
     return model
+
+def sqlite_create_store_model():
+    ''' Helper function to create a related model '''
+    model={
+        'name':     'store',
+        'fields':   [
+            "'id' INTEGER PRIMARY KEY AUTOINCREMENT",
+            "'name' TEXT",
+            "'location' TEXT"
+        ]
+    }
+    return model
+
+def sqlite_create_region_model():
+    ''' Helper function to create a related model '''
+    model={
+        'name':     'region',
+        'fields':   [
+            "'id' INTEGER PRIMARY KEY AUTOINCREMENT",
+            "'name' TEXT",
+            "'location' TEXT"
+        ]
+    }
+    return model
+
+def sqlite_create_store_insert():
+    return '''INTO store(name,location) VALUES('Buy Local','Strip Mall 12, Snaketown'),('Cheap Fruits', 'Under the Willows 12, Snaketown')'''
 
 def sqlite_create_insert_dict(model, dataOption=False):
     ''' Helper fuction to create dict for insert statment '''
@@ -443,6 +472,35 @@ def test_ext_sqlite_update_as_dict_set_as_dict(TestApp: AtbImpAppTest):
     assert rowsAffected == 2
     assert res[0]['price'] == 1
     assert res[1]['price'] == 1
+    
+
+# ---------------------------------------------------------------
+# Select2   JOIN after insert and update.  Which this one
+#   requires.
+# 
+@pytest.mark.argv(['--debug'])
+def test_ext_sqlite_select_join(TestApp: AtbImpAppTest):
+    # Create our models.
+    TestApp.sqlite3.create_model(sqlite_create_test_model())
+    TestApp.sqlite3.create_model(sqlite_create_store_model())
+    
+    # Insert some data
+    TestApp.sqlite3.insert("INTO test(date, txt, price, store_id) VALUES (CURRENT_DATE, 'apple', 1.25, 1)")
+    TestApp.sqlite3.insert("INTO test(date, txt, price, store_id) VALUES (CURRENT_DATE, 'pear', 1.35, 1)")
+    TestApp.sqlite3.insert("INTO test(date, txt, price, store_id) VALUES (CURRENT_DATE, 'banana', 2.25, 2)")
+    TestApp.sqlite3.insert(sqlite_create_store_insert())
+    
+    # Do our query
+    res = TestApp.sqlite3.select({
+        'query':    '*',
+        'from':     'test t',
+        'join':     'store s ON t.store_id = s.id'
+    })
+
+    # check, check double check
+    assert TestApp.exit_code == 0
+    assert len(res) == 3
+    assert res[1]['name'] == 'Buy local'
     
 
 # ---------------------------------------------------------------

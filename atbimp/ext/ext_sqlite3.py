@@ -88,7 +88,7 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
         in the atbimp project.
         '''
 
-        # first seperate the tablse
+        # first seperate the tables
         if type(from_clause) == str:
             tables = from_clause.split(',')
         elif type(from_clause) == list or type(from_clause) == tuple:
@@ -512,6 +512,7 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
                                         {
                                             'query':    <select> ::= <str>|<dict>|<list>,
                                             'from':     [<from>  ::= <str>|<dict>|<list>],
+                                            'join':     [<join>  ::= <str>|<list>,
                                             'where':    [<where> ::= <str>],
                                             'clauses': {                    # additional clauses
                                                 'group_by': [<group_by_clause> ::= <str>],  
@@ -541,6 +542,13 @@ class SQLite3Handler(DatabaseInterface, handler.Handler):
             stmt = f"SELECT {query['query']}"
             if 'from' in query and len(query['from']):
                 stmt += f" FROM {self._escape_from(query['from'])}"
+                
+            if 'join' in query and len(query['join']):
+                if type(query['join']) == str:
+                    stmt += f" JOIN {query['join']}"
+                elif type(query['join']) == list:
+                    joinClause = " ".join(query['join'])
+                    stmt += " JOIN " + " ".join(joinClause)
                 
             if 'where' in query and len(query['where']):
                 # where section and
