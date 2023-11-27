@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS "import" (
 );
 INSERT INTO import VALUES(1,'2023-11-24 02:08:22','tests/twomonths1.tcsv',117,117,0,0,0,17,17,117,0,0,0);
 INSERT INTO import VALUES(2,'2023-11-24 02:09:29','tests/twomonths2.tcsv',3,3,0,0,0,0,0,3,0,0,0);
+INSERT INTO import VALUES(3,'2023-11-24 03:35:25','tests/twomonths2.tcsv',3,3,0,0,0,0,0,3,0,0,3);
 CREATE TABLE IF NOT EXISTS "transaction" (
 	"id"	INTEGER NOT NULL,
 	"account_id"	INTEGER,
@@ -177,11 +178,14 @@ INSERT INTO "transaction" VALUES(117,1,2,1,117,' ',0,'2022-11-01','Transfer','',
 INSERT INTO "transaction" VALUES(118,2,1,2,1,' ',0,'2022-12-05','Payment','',228.86000000000001363,'D',107.43999999999999772,'Loan Payment to TPPL UNSECURED AND CASH SECURED','');
 INSERT INTO "transaction" VALUES(119,2,2,2,2,' ',0,'2022-11-05','Payment','',228.86000000000001363,'D',336.30000000000001135,'Loan Payment to TPPL UNSECURED AND CASH SECURED','');
 INSERT INTO "transaction" VALUES(120,2,2,2,3,' ',0,'2022-11-04','Payment','',500.0,'D',565.15999999999996816,'Bill Payment ATB Mastercard to CAD Mastercard','');
+INSERT INTO "transaction" VALUES(121,2,1,3,1,'D',118,'2022-12-05','Payment','',228.86000000000001363,'D',107.43999999999999772,'Loan Payment to TPPL UNSECURED AND CASH SECURED','');
+INSERT INTO "transaction" VALUES(122,2,2,3,2,'D',119,'2022-11-05','Payment','',228.86000000000001363,'D',336.30000000000001135,'Loan Payment to TPPL UNSECURED AND CASH SECURED','');
+INSERT INTO "transaction" VALUES(123,2,2,3,3,'D',120,'2022-11-04','Payment','',500.0,'D',565.15999999999996816,'Bill Payment ATB Mastercard to CAD Mastercard','');
 DELETE FROM sqlite_sequence;
-INSERT INTO sqlite_sequence VALUES('import',2);
+INSERT INTO sqlite_sequence VALUES('import',3);
 INSERT INTO sqlite_sequence VALUES('account',2);
 INSERT INTO sqlite_sequence VALUES('month',2);
-INSERT INTO sqlite_sequence VALUES('transaction',120);
+INSERT INTO sqlite_sequence VALUES('transaction',123);
 CREATE INDEX "trans_idx" ON "transaction" (
 	"account_id",
 	"date",

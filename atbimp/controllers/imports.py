@@ -77,7 +77,30 @@ class Imports(Controller):
         })
         report = res[0]
 
+        # get the duplicates
+        duplicates = []
+        qry = {
+            'query':    '*',
+            'from':     "transaction",
+            'where':    f"import_id = {import_id} AND flag='D'"
+        }
+        res = self.app.sqlite3.select(qry)
+        if len(res):
+            # find matching originals
+            qry.update({'from': 'transaction t', 'join': 'import i ON i.id = t.import_id'})
+            for duplicate in res:
+                qry.update({'where': f"t.id={duplicate['duplicate_of']}"})
+                res2 = self.app.sqlite3.select(qry)
+                original = res2[0]
+                duplicates.append({'duplicate': duplicate, 'original': original})
+                
+                
+        
+
+        # Render the results
+        #
         self.app.render({
-            'import': imp,
-            'report': report,
+            'import'        : imp,
+            'report'        : report,
+            'duplicates'    : duplicates
         }, './imports/show.jinja2')

@@ -1,4 +1,4 @@
-{% from 'base/macros.jinja2' import import_report %}
+{% from 'base/macros.jinja2' import import_report, transaction_entry %}
 ****************************************************************
 Import data from import: {{ import.id }} [{{ import.time_stamp }}]
 
@@ -6,3 +6,11 @@ Import data from import: {{ import.id }} [{{ import.time_stamp }}]
 
 ****************************************************************
 
+{% if report.duplicatesFound > 0 -%}
+{{ "                       * * * * DUPLICATES FOUND * * * *"    }}
+{%   for entry in duplicates %}
+{{      transaction_entry(entry.duplicate, boxBar=False) }}
+  ↳ ▫︎ duplate of orignal: ↓↓↓ from import: [{{entry.original.time_stamp}}] {{entry.original.source}}
+{{      transaction_entry(entry.original, boxBar=False) }}
+{%  endfor %}
+{% endif %}
