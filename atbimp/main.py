@@ -107,6 +107,7 @@ class AtbImpApp(App):
     EC_PARAM_MISSING = 130
     EC_RECORD_NOT_FOUND = 131
     EC_CONFIRMATION_CANCEL = 132
+    EC_IMPORT_ID_NOT_FOUND = 133
 
     def setupdb(self):
         # Figure out our db file and let sqlite3 know

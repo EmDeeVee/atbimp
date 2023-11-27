@@ -38,6 +38,9 @@ class Imports(Controller):
         self.app.render({'imports': data }, './imports/list.jinja2')
         
     
+    # ----------------------------------------------------------------------
+    # show: show one import
+    #
     @ex(
         help = 'show details of a specific import',
         aliases = ['sh'],
@@ -64,8 +67,9 @@ class Imports(Controller):
             'where':    f"id={import_id}",
         })
         if len(res) == 0:
-            print(f'Import id: {import_id} not found')
-            return False
+            self.app.log.error(f'   Import id: {import_id} not found.')
+            self.app.exit_code = self.app.EC_IMPORT_ID_NOT_FOUND
+            return
 
         imp = res[0]
 
@@ -104,3 +108,39 @@ class Imports(Controller):
             'report'        : report,
             'duplicates'    : duplicates
         }, './imports/show.jinja2')
+        
+    # ----------------------------------------------------------------------
+    # delete: delete one import 
+    #
+    @ex(
+    help = 'delete a specific import',
+    aliases = ['rm','del'],
+    arguments=[
+            (['import_id'],{
+            'help':   'import id to delete',
+            'action': 'store'
+        })]
+    )
+    def delete(self):
+        ''' delete (roll-back) one specific import'''
+        import_id = self.app.pargs.import_id
+        
+        # Check if this import exists
+        res = self.app.sqlite3.select({
+            'query': 'id',
+            'from': 'import',
+            'where': f"id={import_id}"
+        })
+        if len(res) == 0:
+            self.app.log.error(f'   Import id: {import_id} not found.')
+            self.app.exit_code = self.app.EC_IMPORT_ID_NOT_FOUND
+            return
+            
+        # First remove all transactions .....
+        self.app.sqlite3.delete({'from': 'transaction', 'where': f'import_id={import_id}'})
+        
+        # Then the import itself.
+        self.app.sqlite3.delete({'from': 'import', 'where': f'id={import_id}'})
+        
+        # done!.  No questions asked.
+
