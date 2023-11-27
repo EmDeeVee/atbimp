@@ -500,7 +500,7 @@ def test_ext_sqlite_select_join(TestApp: AtbImpAppTest):
     # check, check double check
     assert TestApp.exit_code == 0
     assert len(res) == 3
-    assert res[1]['name'] == 'Buy local'
+    assert res[1]['name'] == 'Buy Local'
     
 
 # ---------------------------------------------------------------
