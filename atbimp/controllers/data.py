@@ -24,7 +24,7 @@ class Data(Controller):
     ## ====================================================================
     ## Helper Functions
     ##
-    def _render_transactions(self, qry, account, options):
+    def _render_transactions(self, qry, account, options, template):
         # launch our query
         try:
             entries = self.app.sqlite3.select(qry)
@@ -76,7 +76,7 @@ class Data(Controller):
             'account': account, 
             'options': options,
             'totals' : totals
-        },'./data/entries.jinja2')
+        },template)
 
     ## ====================================================================
     ## Controller Code
@@ -219,7 +219,7 @@ class Data(Controller):
         # but we want to render the result seperately
         if options['account']:
             # Account was specified, just go for it.
-            self._render_transactions(qry, accounts[acct_id-1], options)
+            self._render_transactions(qry, accounts[acct_id-1], options, './data/entries.jinja2')
         else:
             # Now we have to figure out wich accounts we will get 
             # back from our query
@@ -237,7 +237,7 @@ class Data(Controller):
                     prefix = " AND "
                 acct_id=acct['account_id']
                 qry.update({'where': f"account_id={acct_id}{prefix}{where}"})
-                self._render_transactions(qry, accounts[acct_id-1], options)
+                self._render_transactions(qry, accounts[acct_id-1], options, './data/entries.jinja2')
 
 
 
@@ -260,11 +260,6 @@ class Data(Controller):
                 'action': 'store_false',
                 'dest':   'color'
             }),
-            (['-nb'],{
-                'help':   'display without box bars. [default: box bars]',
-                'action': 'store_false',
-                'dest':   'bars'
-            }),
             (['-D'],{
                 'help':   'calculate and display Delta of running balance. [default Off]',
                 'action': 'store_true',
@@ -284,7 +279,7 @@ class Data(Controller):
         #
         options = {
             'color':    self.app.pargs.color,
-            'bars':     self.app.pargs.bars,
+            'bars':     False,
             'delta':    self.app.pargs.delta,
             'account':  self.app.pargs.account
         }
@@ -331,7 +326,7 @@ class Data(Controller):
         # but we want to render the result seperately
         if options['account']:
             # Account was specified, just go for it.
-            self._render_transactions(qry, accounts[acct_id-1], options)
+            self._render_transactions(qry, accounts[acct_id-1], options, './data/entries.jinja2')
         else:
             # Now we have to figure out wich accounts we will get 
             # back from our query
@@ -349,7 +344,7 @@ class Data(Controller):
                     prefix = " AND "
                 acct_id=acct['account_id']
                 qry.update({'where': f"account_id={acct_id}{prefix}{where}"})
-                self._render_transactions(qry, accounts[acct_id-1], options)
+                self._render_transactions(qry, accounts[acct_id-1], options, './data/entries.jinja2')
 
 
         
