@@ -26,10 +26,7 @@ class Data(Controller):
     ##
     def _render_transactions(self, qry, account, options, template):
         # launch our query
-        try:
-            entries = self.app.sqlite3.select(qry)
-        except:
-            raise ConnectionError
+        entries = self.app.sqlite3.select(qry)
         
         # Do we need to calculate delta?
         if options['delta']:
@@ -263,11 +260,11 @@ class Data(Controller):
                 'action': 'store_false',
                 'dest':   'color'
             }),
-            (['-D'],{
-                'help':   'calculate and display Delta of running balance. [default Off]',
-                'action': 'store_true',
-                'dest':   'delta'
-            }),
+            # (['-D'],{
+            #     'help':   'calculate and display Delta of running balance. [default Off]',
+            #     'action': 'store_true',
+            #     'dest':   'delta'
+            # }),
             (['item'],{
                 'help': '{amount|text} locates amount in transactions or text in description"',
                 'action': 'store'
@@ -283,7 +280,7 @@ class Data(Controller):
         options = {
             'color':    self.app.pargs.color,
             'bars':     False,
-            'delta':    self.app.pargs.delta,
+            'delta':    False,
             'account':  self.app.pargs.account
         }
         colorMap = self.app.config.get(self.app.label,'colormap')
@@ -310,12 +307,12 @@ class Data(Controller):
         if options['account']:
             where += " AND "
             # Lookup our account id
-            qry={
+            qryAcct={
                 'query': '*',
                 'from':  'account',
                 'where': f"alias='%{options['account']}%' OR acct_number LIKE '%{options['account']}%' OR nick_name LIKE '%{options['account']}%';"
             }
-            res = self.app.sqlite3.select(qry)
+            res = self.app.sqlite3.select(qryAcct)
             if len(res) != 1:
                 # There can be ony one!
                 self.app.log.error(' Invalid account specication or account not found. Use <alias>|<acct_number>|<nick_name>')
@@ -324,7 +321,7 @@ class Data(Controller):
 
             # Now we have our id, let's start building up the where clause
             acct_id=res[0]['id']
-            where = f"account_id = {acct_id}"
+            where += f"account_id = {acct_id}"
 
         qry.update({'where': where})
         
@@ -332,7 +329,7 @@ class Data(Controller):
         # but we want to render the result seperately
         if options['account']:
             # Account was specified, just go for it.
-            self._render_transactions(qry, accounts[acct_id-1], options, './data/entries.jinja2')
+            self._render_transactions(qry, accounts[acct_id-1], options, './data/locate.jinja2')
         else:
             # Now we have to figure out wich accounts we will get 
             # back from our query
@@ -350,7 +347,7 @@ class Data(Controller):
                     prefix = " AND "
                 acct_id=acct['account_id']
                 qry.update({'where': f"account_id={acct_id}{prefix}{where}"})
-                self._render_transactions(qry, accounts[acct_id-1], options, './data/entries.jinja2')
+                self._render_transactions(qry, accounts[acct_id-1], options, './data/locate.jinja2')
 
 
         

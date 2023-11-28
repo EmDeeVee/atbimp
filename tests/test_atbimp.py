@@ -346,8 +346,16 @@ def test_atbimp_data_show_date_all_accounts(TestAppDb2Months):
 def test_atbimp_data_show_date_one_account(TestAppDb2Months):
     assert TestAppDb2Months.exit_code == 0
 
-@pytest.mark.argv(['data', 'locate', '100.00'])
-def test_atbimp_data_locate_100(TestAppDb2Months):
+@pytest.mark.argv(['data', 'locate', '500.00'])
+def test_atbimp_data_locate_amt(TestAppDb2Months):
+    assert TestAppDb2Months.exit_code == 0
+
+@pytest.mark.argv(['data', 'locate', 'master'])
+def test_atbimp_data_locate_desc(TestAppDb2Months):
+    assert TestAppDb2Months.exit_code == 0
+
+@pytest.mark.argv(['data', 'locate', '500.00', '-a', '1234'])
+def test_atbimp_data_locate_amt_acct(TestAppDb2Months):
     assert TestAppDb2Months.exit_code == 0
 
 
