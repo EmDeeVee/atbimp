@@ -160,10 +160,7 @@ class Data(Controller):
 
         # get the contents of the accounts table.  We need this later
         #
-        try:
-            accounts = self.app.sqlite3.select({'query': '*', 'from': 'account'})
-        except:
-            raise ConnectionError
+        accounts = self.app.sqlite3.select({'query': '*', 'from': 'account'})
 
         prefix = ""
         where = ""
@@ -174,10 +171,7 @@ class Data(Controller):
                 'from':  'account',
                 'where': f"alias='%{options['account']}%' OR acct_number LIKE '%{options['account']}%' OR nick_name LIKE '%{options['account']}%';"
             }
-            try:
-                res = self.app.sqlite3.select(qry)
-            except:
-                raise ConnectionError
+            res = self.app.sqlite3.select(qry)
             if len(res) != 1:
                 # There can be ony one!
                 self.app.log.error(' Invalid account specication or account not found. Use <alias>|<acct_number>|<nick_name>')
@@ -235,10 +229,7 @@ class Data(Controller):
                 'from':  'transaction',
                 'where':  where
             }
-            try:
-                res = self.app.sqlite3.select(acctQry)
-            except:
-                raise ConnectionError
+            res = self.app.sqlite3.select(acctQry)
             
             # BUG:  Crashes on empty database.
             for acct in res:
@@ -254,18 +245,33 @@ class Data(Controller):
         help='locate an amount in entries',
         aliases=['loc'],
         arguments=[
-            (['-in'],{
-                'help': 'field to locate: amt (amount) or desc (description)',
-                'action': 'store',
-                'choices': ['amt', 'desc']
-            }),
+            # (['-in'],{
+            #     'help': 'field to locate: amt (amount) or desc (description) default: amt',
+            #     'action': 'store',
+            #     'choices': ['amt', 'desc']
+            # }),
             (['-a'],{
-                'help': 'in <account_alias>|<account_number>  (example: -a 1234)',
+                'help':   'select account: <alias>|<acct_number>|<nick_name>  (example: -a 1234)',
                 'action': 'store',
-                'dest': 'account'
+                'dest':   'account'
+            }),
+            (['-bw'],{
+                'help':   '(b/w): display without color, usefull for printing. [default: Color]',
+                'action': 'store_false',
+                'dest':   'color'
+            }),
+            (['-nb'],{
+                'help':   'display without box bars. [default: box bars]',
+                'action': 'store_false',
+                'dest':   'bars'
+            }),
+            (['-D'],{
+                'help':   'calculate and display Delta of running balance. [default Off]',
+                'action': 'store_true',
+                'dest':   'delta'
             }),
             (['item'],{
-                'help': 'item to locate',
+                'help': '{amount|text} locates amount in transactions or text in description"',
                 'action': 'store'
             })]
 
@@ -274,5 +280,77 @@ class Data(Controller):
         '''
         loc | locate  entry in amount or description
         '''
-        pass
+        # FIXME:  Not a lot `DRY` programming between show and locate.
+        #
+        options = {
+            'color':    self.app.pargs.color,
+            'bars':     self.app.pargs.bars,
+            'delta':    self.app.pargs.delta,
+            'account':  self.app.pargs.account
+        }
+
+        # get the contents of the accounts table.  We need this later
+        #
+        accounts = self.app.sqlite3.select({'query': '*', 'from': 'account'})
+
+        qry = {
+            'query':    '*',
+            'from':     'transaction'
+        }
+
+        # The type will help us with the where clause
+        try:
+            item = float(self.app.pargs.item)
+            where = f"amount={item}"
+        except:
+            item = self.app.pargs.item
+            where = f"description like '%{item}%'"
+
+        if options['account']:
+            where += " AND "
+            # Lookup our account id
+            qry={
+                'query': '*',
+                'from':  'account',
+                'where': f"alias='%{options['account']}%' OR acct_number LIKE '%{options['account']}%' OR nick_name LIKE '%{options['account']}%';"
+            }
+            res = self.app.sqlite3.select(qry)
+            if len(res) != 1:
+                # There can be ony one!
+                self.app.log.error(' Invalid account specication or account not found. Use <alias>|<acct_number>|<nick_name>')
+                self.app.exit_code = self.app.EC_PARAM_WRONG_FORMAT
+                return 
+
+            # Now we have our id, let's start building up the where clause
+            acct_id=res[0]['id']
+            where = f"account_id = {acct_id}"
+
+        qry.update({'where': where})
+        
+        # We could be requested to display results over multiple accounts. 
+        # but we want to render the result seperately
+        if options['account']:
+            # Account was specified, just go for it.
+            self._render_transactions(qry, accounts[acct_id-1], options)
+        else:
+            # Now we have to figure out wich accounts we will get 
+            # back from our query
+            where = qry['where']
+            acctQry = {
+                'query': 'DISTINCT account_id',
+                'from':  'transaction',
+                'where':  where
+            }
+            res = self.app.sqlite3.select(acctQry)
+            
+            # BUG:  Crashes on empty database.
+            for acct in res:
+                if len(where):
+                    prefix = " AND "
+                acct_id=acct['account_id']
+                qry.update({'where': f"account_id={acct_id}{prefix}{where}"})
+                self._render_transactions(qry, accounts[acct_id-1], options)
+
+
+        
 
