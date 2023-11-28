@@ -48,9 +48,35 @@ class Data(Controller):
 
                 entries[i]['delta'] = delta
 
+        # Calculate the totals
+        #
+        # start  and end balance
+        factor = 1 if entries[0]['dc'] == 'C' else -1
+        startBal = entries[0]['balance'] - (entries[0]['amount'] * factor)
+        endBal = entries[len(entries)-1]['balance']
+
+        # Calculate debit/credit totals
+        debit = 0; credit = 0;
+        for entry in entries:
+            if entry['dc'] == 'D':
+                debit += entry['amount']
+            else:
+                credit += entry['amount']
+
+        totals = { 
+            'start': startBal, 
+            'end': endBal,
+            'debit': debit,
+            'credit': credit 
+        }
 
         # display the result
-        self.app.render({'entries': entries, 'account': account, 'options': options },'./data/entries.jinja2')
+        self.app.render({
+            'entries': entries, 
+            'account': account, 
+            'options': options,
+            'totals' : totals
+        },'./data/entries.jinja2')
 
     ## ====================================================================
     ## Controller Code

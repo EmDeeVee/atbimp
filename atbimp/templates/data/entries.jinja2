@@ -4,6 +4,7 @@
         "blue":         color('blue'),
         "red":          color('red'),
         "green":        color('green'),
+        "yellow":       color('yellow'),
         "off":          color('off'),
         "bright":       color('bright'),
         "gray":         color('gray'),
@@ -12,7 +13,7 @@
     } 
 %}
 {%- else -%}
-{%     set clr = {"blue": "", "red": "", "green": "", "off": "", "bright": ""} -%}
+{%     set clr = {"blue": "", "red": "", "green": "", "yellow": "", "off": "", "bright": ""} -%}
 {%  endif -%}
 {% if options.bars %}{% set bar = '┃' %}{% else %}{% set bar = ' '%}{% endif -%}
 {# Start of the template 
@@ -23,10 +24,14 @@
 {{ clr.bright }}
 {% if options.bars %} ┏━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━┓{% endif %}
  {{bar}}  Date    {{bar}} Transact Type {{bar}} Description                                                    {{bar}}     Credit {{bar}}      Debit {{bar}}    Balance {{bar}}
-{% if options.bars %} ┣━━━━━━━━━━╋━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━┫{% endif -%}
+{% if options.bars %} ┣━━━━━━━━━━╋━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━┫{{ clr.off}} {% endif %}
 {{- clr.off }}
+ {{bar}}          {{bar}}               {{bar}}{{ clr.yellow + "↦ Start Balance" + clr.off }}                                                 {{bar}}            {{bar}}            {{bar}}{{ clr.yellow + "{:12,.2f}".format(totals.start) + clr.off }}{{bar}}
+{% if options.bars %} ┣━━━━━━━━━━╋━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━┫{{ clr.off}} {% endif %}
 {%- for entry in entries %}
 {{ transaction_entry(entry, colors=options.color, delta=options.delta, boxBar=options.bars) }}
 {%- endfor %}
+{% if options.bars %} ┣━━━━━━━━━━╋━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━┫{{ clr.off}} {% endif %}
+ {{bar}}          {{bar}}               {{bar}}{{ clr.yellow + "⇤ End Balance and totals" + clr.off }}                                        {{bar}}{{ clr.yellow + "{:12,.2f}".format(totals.credit) + clr.off }}{{bar}}{{ clr.yellow + "{:12,.2f}".format(totals.debit) + clr.off }}{{bar}}{{ clr.yellow + "{:12,.2f}".format(totals.end) + clr.off }}{{bar}}
 {% if options.bars %}{{ clr.bright }} ┗━━━━━━━━━━┻━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━┻━━━━━━━━━━━━┻━━━━━━━━━━━━┛{{ clr.off }}{% endif %}
 
