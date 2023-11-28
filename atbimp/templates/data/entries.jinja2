@@ -1,20 +1,5 @@
-{%  from 'base/macros.jinja2' import transaction_entry,color %}
-{%  if options.color -%}
-{%   set clr = {
-        "blue":         color('blue'),
-        "red":          color('red'),
-        "green":        color('green'),
-        "yellow":       color('yellow'),
-        "off":          color('off'),
-        "bright":       color('bright'),
-        "gray":         color('gray'),
-        "highlight1":   color('highlight1'),
-        "highlight2":   color('highlight2'),
-    } 
-%}
-{%- else -%}
-{%     set clr = {"blue": "", "red": "", "green": "", "yellow": "", "off": "", "bright": ""} -%}
-{%  endif -%}
+{%  from 'base/macros.jinja2' import transaction_entry %}
+{% set clr = options.colorMap -%}
 {% if options.bars %}{% set bar = '┃' %}{% else %}{% set bar = ' '%}{% endif -%}
 {# Start of the template 
 #}
@@ -29,7 +14,7 @@
  {{bar}}          {{bar}}               {{bar}}{{ clr.yellow + "↦ Start Balance" + clr.off }}                                                 {{bar}}            {{bar}}            {{bar}}{{ clr.yellow + "{:12,.2f}".format(totals.start) + clr.off }}{{bar}}
 {% if options.bars %} ┣━━━━━━━━━━╋━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━┫{{ clr.off}} {% endif %}
 {%- for entry in entries %}
-{{ transaction_entry(entry, colors=options.color, delta=options.delta, boxBar=options.bars) }}
+{{ transaction_entry(entry, colorMap=options.colorMap, delta=options.delta, boxBar=options.bars) }}
 {%- endfor %}
 {% if options.bars %} ┣━━━━━━━━━━╋━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━┫{{ clr.off}} {% endif %}
  {{bar}}          {{bar}}               {{bar}}{{ clr.yellow + "⇤ End Balance and totals" + clr.off }}                                        {{bar}}{{ clr.yellow + "{:12,.2f}".format(totals.credit) + clr.off }}{{bar}}{{ clr.yellow + "{:12,.2f}".format(totals.debit) + clr.off }}{{bar}}{{ clr.yellow + "{:12,.2f}".format(totals.end) + clr.off }}{{bar}}

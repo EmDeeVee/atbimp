@@ -60,6 +60,9 @@ class Imports(Controller):
             self.list()
             return
         
+        colors = self.app.config.get(self.app.label, 'colorMap')
+        colorMap = colors[0]        # as in no colors .... Yet
+        
         # Get the data sets, first import
         res = self.app.sqlite3.select({
             'query':    "id, time_stamp, source",
@@ -106,6 +109,7 @@ class Imports(Controller):
         self.app.render({
             'import'        : imp,
             'report'        : report,
+            'colorMap'      : colorMap,
             'duplicates'    : duplicates
         }, './imports/show.jinja2')
         

@@ -1,55 +1,12 @@
-{#
-    Macro to use ANSI escape colors
-#}
-{%  macro color(colorName) -%}
-{%  if colorName == 'blue' -%}
-{{-     "\033[34m" -}}
-{%- elif colorName == 'red' -%}
-{{-     "\033[31m" -}}
-{%- elif colorName == 'green' -%}
-{{-     "\033[32m" -}}
-{%- elif colorName == 'yellow' -%}
-{{-     "\033[33m" -}}
-{%- elif colorName == 'off' -%}
-{{-     "\033[0m" -}}
-{%- elif colorName == 'bright' -%}
-{{-     "\033[1m" -}}
-{%- elif colorName == 'gray' -%}
-{{-     "\033[38;5;238m" -}}
-{%- elif colorName == 'highlight1' -%}
-{{-     "\033[1;38;5;1m\033[1;48;5;254m" -}}
-{%- elif colorName == 'highlight2' -%}
-{{-     "\033[1;48;5;226m" -}}
-{%  endif -%}
-{%- endmacro -%}
 {# 
     Macro to display transaction entry.  The usage of colors and the boxbar
     is determined by the parameters 
 
 #}
-{% macro transaction_entry(entry, colors=True, boxBar=True, highlight=None, delta=False) -%}
-{%  if colors -%}
-{%   set clr = {
-        "blue":         color('blue'),
-        "red":          color('red'),
-        "green":        color('green'),
-        "yellow":       color('yellow'),
-        "off":          color('off'),
-        "bright":       color('bright'),
-        "gray":         color('gray'),
-        "highlight1":   color('highlight1'),
-        "highlight2":   color('highlight2'),
-    } 
-%}
-{%- else -%}
-{%     set clr = {"blue": "", "red": "", "green": "", "yellow": "", "off": "", "bright": ""} -%}
-{%  endif -%}
+{% macro transaction_entry(entry, colorMap, boxBar=True, highlight=None, delta=False) -%}
+{% set clr = colorMap -%}
 {% if boxBar -%}
-{%    if colors -%}
-{%        set bar=clr.bright + "┃" + clr.off -%}
-{%-     else -%}
-{%        set bar="┃" -%}
-{%    endif -%}
+{%    set bar=clr.bright + "┃" + clr.off -%}
 {%- else -%}
 {%    set bar=" " -%}
 {% endif -%}

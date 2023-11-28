@@ -139,6 +139,9 @@ class Data(Controller):
             'delta':    self.app.pargs.delta,
             'account':  self.app.pargs.account
         }
+        colorMap = self.app.config.get(self.app.label,'colormap')
+        options.update({'colorMap': colorMap[options['color']]})
+        
 
         # sanity checks
         if options['month']:
@@ -283,6 +286,9 @@ class Data(Controller):
             'delta':    self.app.pargs.delta,
             'account':  self.app.pargs.account
         }
+        colorMap = self.app.config.get(self.app.label,'colormap')
+        options.update({'colorMap': colorMap[options['color']]})
+
 
         # get the contents of the accounts table.  We need this later
         #

@@ -46,6 +46,34 @@ CONFIG['atbimp']['exp_tbl_cols'] = [
     'bank_reference_number'     #9
 ]
 
+# Color Map.  Used by the jinja2 templates
+#
+CONFIG['atbimp']['colormap'] = [
+    # 0 == False == No Colors
+    {
+        'off'       : '',
+        'blue'      : '',
+        'red'       : '',
+        'green'     : '',
+        'yellow'    : '',
+        'gray'      : '', 
+        'bright'    : '',
+        'highlight1': '',
+        'highlight2': ''
+    },
+    # 1 == True == Ansi Colors
+    {
+        'off'       : '\033[0m',
+        'blue'      : '\033[34m',
+        'red'       : '\033[31m',
+        'green'     : '\033[32m',
+        'yellow'    : '\033[33m',
+        'gray'      : '\033[38;5;238m', 
+        'bright'    : '\033[1m',
+        'highlight1': '\033[1;38;5;1m\033[1;48;5;254m',
+        'highlight2': '\033[1;48;5;226m'
+    }
+]
 
 
 def atbimp_post_argument_hook(app):
