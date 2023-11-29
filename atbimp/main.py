@@ -162,7 +162,7 @@ class AtbImpApp(App):
         if len(models) == 0:
             # Empty db, we have to fill this
             #
-            ret = self.sqlite3.import_script( f'{os.path.dirname(os.path.realpath(__file__))}/../config/initdb.sql')
+            self.sqlite3.import_script( f'{os.path.dirname(os.path.realpath(__file__))}/../config/initdb.sql')
 
             # Let's try again
             models = self.sqlite3.show_models()

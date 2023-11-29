@@ -1,4 +1,5 @@
-import os, io, sqlite3
+import os
+import sqlite3
 import pytest
 from atbimp.main import AtbImpAppTest
 

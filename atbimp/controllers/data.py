@@ -53,7 +53,8 @@ class Data(Controller):
         endBal = entries[len(entries)-1]['balance']
 
         # Calculate debit/credit totals
-        debit = 0; credit = 0;
+        debit = 0
+        credit = 0
         for entry in entries:
             if entry['dc'] == 'D':
                 debit += entry['amount']
@@ -300,7 +301,7 @@ class Data(Controller):
         try:
             item = float(self.app.pargs.item)
             where = f"amount={item}"
-        except:
+        except Exception:
             item = self.app.pargs.item
             where = f"description like '%{item}%'"
 
