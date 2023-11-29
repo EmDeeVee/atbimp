@@ -1,3 +1,4 @@
+
 {% for import in imports -%}
 {{ "%4d: "|format(import.id)}}[{{ import.time_stamp }}] - {{ "Lines: %4d "|format(import.linesRead) -}}
 {{ "Recs: %4d "|format(import.recordsImported)}}{{ "Err: %4d "|format(import.totalErrors ) -}}

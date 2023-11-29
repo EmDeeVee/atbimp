@@ -45,7 +45,12 @@ class Imports(Controller):
         help = 'show details of a specific import',
         aliases = ['sh'],
         arguments=[
-                (['import_id'],{
+            (['-bw'],{
+                'help':   '(b/w): display without color, usefull for printing. [default: Color]',
+                'action': 'store_false',
+                'dest':   'color'
+            }),
+            (['import_id'],{
                 'help':   'import id to show',
                 'action': 'store',
                 'default': 'all'
@@ -61,7 +66,7 @@ class Imports(Controller):
             return
         
         colors = self.app.config.get(self.app.label, 'colorMap')
-        colorMap = colors[0]        # as in no colors .... Yet
+        colorMap = colors[self.app.pargs.color] 
         
         # Get the data sets, first import
         res = self.app.sqlite3.select({
