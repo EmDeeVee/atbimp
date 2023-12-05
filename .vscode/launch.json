@@ -49,5 +49,14 @@
             "console": "integratedTerminal",
             "justMyCode": false
         },
+        {
+            "name": "atbimp data show -m 2022-02",
+            "type": "python",
+            "request": "launch",
+            "program": "env/bin/atbimp",
+            "args": "data show -m 2022-02 -nb -D",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
     ]
 }

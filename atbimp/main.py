@@ -137,6 +137,7 @@ class AtbImpApp(App):
     EC_CONFIRMATION_CANCEL = 132
     EC_IMPORT_ID_NOT_FOUND = 133
     EC_ACCOUNT_NOT_FOUND = 134
+    EC_MONTH_NOT_FOUND = 135
 
     def setupdb(self):
         # Figure out our db file and let sqlite3 know

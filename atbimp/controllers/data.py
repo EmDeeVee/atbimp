@@ -206,6 +206,11 @@ class Data(Controller):
                 # We only want the first one
                 where += f"{prefix}month_id={res[0]['id']}"
                 prefix = " AND "
+            else:
+                # Month Requested but not found.  End of Story
+                self.app.log.warning(f'  No transactions found for month: {options["month"]}')
+                self.app.exit_code = self.app.EC_MONTH_NOT_FOUND
+                return
                 
         elif options['rnge']:
             where += f"{prefix}date BETWEEN '{rng.group('from')}' AND '{rng.group('to')}'"
