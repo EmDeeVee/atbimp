@@ -50,11 +50,11 @@
             "justMyCode": false
         },
         {
-            "name": "atbimp data show -m 2022-02",
+            "name": "atbimp data show -a Flex -nb -D -d 2022-04-01",
             "type": "python",
             "request": "launch",
             "program": "env/bin/atbimp",
-            "args": "data show -m 2022-02 -nb -D",
+            "args": "data show -a Flex -nb -D -d 2022-04-01",
             "console": "integratedTerminal",
             "justMyCode": false
         },
