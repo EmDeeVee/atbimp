@@ -68,6 +68,19 @@ $ pip install -r requiremennts.txt
 $ python setup.py install
 ```
 
+### Alternate instalation dealing with "Externaly Managed Enviroment" Pip Error
+[See here for details](https://www.makeuseof.com/fix-pip-error-externally-managed-environment-linux/)
+```
+$ make virtualenv
+$ source env/bin/activat3
+$ pip install -r requirments.txt
+$ make test 
+$ sqlite3 transactions.db3 < tests/twomonths.db3.sql
+$ atbimp imp ls
+$ atbimp data show -nb -a Unlimited -r 2022-11-01:2022-11-10
+```
+Happy hunting! 😉
+
 ## Development
 
 This project includes a number of helpers in the `Makefile` to streamline common development tasks.
