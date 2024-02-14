@@ -72,8 +72,7 @@ $ python setup.py install
 [See here for details](https://www.makeuseof.com/fix-pip-error-externally-managed-environment-linux/)
 ```
 $ make virtualenv
-$ source env/bin/activat3
-$ pip install -r requirments.txt
+$ source env/bin/activate
 $ make test 
 $ sqlite3 transactions.db3 < tests/twomonths.db3.sql
 $ atbimp imp ls
