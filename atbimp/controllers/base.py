@@ -19,9 +19,9 @@ class Base(Controller):
 
     1) Check, fix and import your csv files using the 'csv' sub commands'
     2) Optionally you can assign nick-names to the accounts imported using 
-       'data accounts' commands.
+       'act' command.
     3) After import check for duplicates or false positives and decide to 
-       import them after all, or mark as duplicate and remove.
+       import them after all.
     4) display months, date ranges or find a specific amount or part of the
        description using the csv data commands.
 '''
