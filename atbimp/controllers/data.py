@@ -27,6 +27,8 @@ class Data(Controller):
     def _render_transactions(self, qry, account, options, template):
         # launch our query
         entries = self.app.sqlite3.select(qry)
+        if len(entries) == 0:
+            return False
         
         # Do we need to calculate delta?
         if options['delta']:
@@ -75,6 +77,8 @@ class Data(Controller):
             'options': options,
             'totals' : totals
         },template)
+        
+        return True
 
     ## ====================================================================
     ## Controller Code
@@ -99,7 +103,7 @@ class Data(Controller):
                 'dest':   'range'  # range is reserved keyword
             }),
             (['-d'],{
-                'help':   'show transactions on date: YYYY-MM-DD (example: -r 2022-01-01:2022-03-31)',
+                'help':   'show transactions on date: YYYY-MM-DD (example: -d 2022-01-01)',
                 'action': 'store',
                 'dest':   'date'
             }),
@@ -225,7 +229,10 @@ class Data(Controller):
         # but we want to render the result seperately
         if options['account']:
             # Account was specified, just go for it.
-            self._render_transactions(qry, accounts[acct_id-1], options, './data/entries.jinja2')
+            if not self._render_transactions(qry, accounts[acct_id-1], options, './data/entries.jinja2'):
+                self.app.log.warning(f'  No transactions found')
+                self.app.exit_code = self.app.EC_RECORD_NOT_FOUND
+                return 
         else:
             # Now we have to figure out wich accounts we will get 
             # back from our query
@@ -236,8 +243,11 @@ class Data(Controller):
                 'where':  where
             }
             res = self.app.sqlite3.select(acctQry)
+            if len(res) == 0:
+                self.app.log.warning(f'  No transactions found')
+                self.app.exit_code = self.app.EC_RECORD_NOT_FOUND
+                return 
             
-            # BUG:  Crashes on empty database.
             for acct in res:
                 if len(where):
                     prefix = " AND "

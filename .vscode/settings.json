@@ -13,6 +13,12 @@
             "driver": "SQLite",
             "database": "${workspaceFolder:atbimp}/twomonths.db3",
             "name": "twomonths"
+        },
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "name": "transactions",
+            "database": "${workspaceFolder:atbimp}/transactions.db3"
         }
     ],
 }
