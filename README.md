@@ -57,7 +57,9 @@ The `atbimp` program is written in python using [Cement 3.0](https://github.com/
 
 
 ## License
-GPL, free for any ***none commercial use***.  If you're a developer for a bank, please contact me. 😉
+GNU LESSER GENERAL PUBLIC LICENSE Version 3.0 
+***If you're a developer for a bank, please contact me.*** 😉
+
 
 
 ## Installation
