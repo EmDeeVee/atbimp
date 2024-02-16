@@ -17,7 +17,7 @@ After that the folowing 4 checks/fixes are executed on each line of input:
 ### Design and Usage
 
 #### Design
-The `atbimp` program is written in python using [Cement 3.0](https://github.com/datafolklabs/cement) as a MVC framework. It includes unit-tests and some ***fake*** test data. It should work cross-platform, however I've only tested it on MacOS and Linux ***(Debian)***. I don't have Windows available and did not yet go the docker-route.  The instructions below regarding Installation and Development are auto generated from the **Cement** framework.
+The `atbimp` program is written in python using [Cement 3.0](https://github.com/datafolklabs/cement) as a MVC framework. It includes unit-tests and some ***fake*** test data. It should work cross-platform, however I've only tested it on MacOS and Linux ***(Debian)***. I didn't check Windows yet and did not yet go the docker-route.  The instructions below regarding Installation and Development are auto generated from the **Cement** framework.
 
 #### usage 
 
